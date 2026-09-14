@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 export default function About() {
   return (
     <section
@@ -5,11 +7,15 @@ export default function About() {
       className="mx-auto grid max-w-content gap-10 border-t border-line px-6 py-20 md:grid-cols-[1fr_1.4fr] md:gap-16"
     >
       <div>
-        {/* Placeholder image area — replace with a real portrait later */}
-        <div className="flex aspect-[4/5] w-full max-w-xs items-center justify-center rounded-2xl border border-dashed border-line bg-pine-light text-center text-sm text-muted">
-          Profile image placeholder
-          <br />
-          (replace with portrait)
+        <div className="relative aspect-[4/5] w-full max-w-xs overflow-hidden rounded-2xl border border-line bg-pine-light">
+          <Image
+            src="/images/profile.jpg"
+            alt="Salmaan Mukhtaar Xaashi"
+            fill
+            sizes="(min-width: 768px) 320px, 90vw"
+            className="object-cover"
+            priority
+          />
         </div>
       </div>
 
