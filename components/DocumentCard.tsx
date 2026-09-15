@@ -1,38 +1,88 @@
-import type { MarketplaceDocument } from "@/data/documents";
+"use client";
 
-export default function DocumentCard({ doc }: { doc: MarketplaceDocument }) {
-  const isFree = doc.price === 0;
+import { getSupabaseClient } from "@/lib/supabase/client";
+import { getFreeDocumentUrl, getThumbnailUrl } from "@/lib/supabase/storage";
+import type { MarketplaceDocument } from "@/lib/supabase/types";
+
+export default function DocumentCard({
+  doc,
+  categoryName,
+}: {
+  doc: MarketplaceDocument;
+  categoryName?: string;
+}) {
+  const thumbnailUrl = getThumbnailUrl(doc.thumbnail_path);
+
+  async function handleDownload() {
+    if (!doc.is_free) return;
+    const supabase = getSupabaseClient();
+    // Best-effort download count — never blocks the download itself.
+    if (supabase) {
+      supabase.rpc("increment_download_count", { doc_id: doc.id }).then();
+    }
+    const url = getFreeDocumentUrl(doc.file_path);
+    if (url) {
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+  }
+
+  function handleBuy() {
+    if (doc.payment_link) {
+      window.open(doc.payment_link, "_blank", "noopener,noreferrer");
+    }
+  }
 
   return (
     <div className="flex h-full flex-col justify-between rounded-2xl border border-line p-6">
       <div>
+        {thumbnailUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={thumbnailUrl}
+            alt=""
+            className="mb-4 aspect-[4/3] w-full rounded-lg object-cover"
+          />
+        )}
+
         <div className="flex items-start justify-between gap-3">
-          <span className="rounded-full border border-line px-3 py-1 text-xs text-muted">
-            {doc.category}
-          </span>
-          <span className="text-xs uppercase tracking-wide text-muted">
-            {doc.fileType}
-          </span>
+          {categoryName && (
+            <span className="rounded-full border border-line px-3 py-1 text-xs text-muted">
+              {categoryName}
+            </span>
+          )}
         </div>
 
         <h3 className="mt-4 font-display text-lg text-ink">{doc.title}</h3>
-        <p className="mt-2 text-sm leading-relaxed text-ink/80">
-          {doc.description}
-        </p>
+        {doc.description && (
+          <p className="mt-2 text-sm leading-relaxed text-ink/80">
+            {doc.description}
+          </p>
+        )}
       </div>
 
       <div className="mt-6 flex items-center justify-between">
         <span className="text-sm font-medium text-ink">
-          {isFree ? "Free" : `$${doc.price.toFixed(2)}`}
+          {doc.is_free ? "Free" : `$${doc.price.toFixed(2)}`}
         </span>
-        <button
-          type="button"
-          className={`focus-ring rounded-full px-5 py-2 text-sm font-medium text-paper transition-colors ${
-            isFree ? "bg-pine hover:bg-pine-dark" : "bg-gold hover:opacity-90"
-          }`}
-        >
-          {isFree ? "Download" : "Buy Now"}
-        </button>
+        {doc.is_free ? (
+          <button
+            type="button"
+            onClick={handleDownload}
+            disabled={!doc.file_path}
+            className="focus-ring rounded-full bg-pine px-5 py-2 text-sm font-medium text-paper transition-colors hover:bg-pine-dark disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Download
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleBuy}
+            disabled={!doc.payment_link}
+            className="focus-ring rounded-full bg-gold px-5 py-2 text-sm font-medium text-paper transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Buy Now
+          </button>
+        )}
       </div>
     </div>
   );

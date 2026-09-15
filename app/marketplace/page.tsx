@@ -1,41 +1,84 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { documents, type DocumentCategory } from "@/data/documents";
+import { getSupabaseClient } from "@/lib/supabase/client";
+import type { Category, MarketplaceDocument } from "@/lib/supabase/types";
 import DocumentCard from "@/components/DocumentCard";
-
-const categories: DocumentCategory[] = [
-  "Education",
-  "Computer Science",
-  "Business",
-  "Books",
-  "Other",
-];
 
 export default function MarketplacePage() {
   const [query, setQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState<DocumentCategory | "All">(
-    "All"
-  );
+  const [activeCategory, setActiveCategory] = useState<string>("All");
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [documents, setDocuments] = useState<MarketplaceDocument[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      setError(
+        "Marketplace isn't configured yet — Supabase environment variables are missing."
+      );
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function load() {
+      const [{ data: cats, error: catErr }, { data: docs, error: docErr }] =
+        await Promise.all([
+          supabase!.from("categories").select("id, name, slug").order("name"),
+          supabase!
+            .from("documents")
+            .select(
+              "id, title, description, category_id, file_path, thumbnail_path, price, is_free, payment_link, published, download_count, created_at, updated_at"
+            )
+            .eq("published", true)
+            .order("created_at", { ascending: false }),
+        ]);
+
+      if (cancelled) return;
+
+      if (catErr || docErr) {
+        setError((catErr ?? docErr)?.message ?? "Failed to load marketplace.");
+      } else {
+        setCategories(cats ?? []);
+        setDocuments(docs ?? []);
+      }
+      setLoading(false);
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const categoryMap = useMemo(() => {
+    const map = new Map<string, string>();
+    categories.forEach((c) => map.set(c.id, c.name));
+    return map;
+  }, [categories]);
 
   const filtered = useMemo(() => {
     return documents.filter((doc) => {
+      const categoryName = doc.category_id
+        ? categoryMap.get(doc.category_id)
+        : undefined;
       const matchesCategory =
-        activeCategory === "All" || doc.category === activeCategory;
+        activeCategory === "All" || categoryName === activeCategory;
       const matchesQuery = doc.title
         .toLowerCase()
         .includes(query.trim().toLowerCase());
       return matchesCategory && matchesQuery;
     });
-  }, [query, activeCategory]);
+  }, [documents, query, activeCategory, categoryMap]);
 
   return (
     <main className="mx-auto min-h-screen max-w-content px-6 py-12">
-      <Link
-        href="/"
-        className="focus-ring text-sm text-muted hover:text-ink"
-      >
+      <Link href="/" className="focus-ring text-sm text-muted hover:text-ink">
         ← Back to Portfolio
       </Link>
 
@@ -71,30 +114,42 @@ export default function MarketplacePage() {
           </button>
           {categories.map((category) => (
             <button
-              key={category}
+              key={category.id}
               type="button"
-              onClick={() => setActiveCategory(category)}
+              onClick={() => setActiveCategory(category.name)}
               className={`focus-ring rounded-full border px-4 py-2 text-xs transition-colors ${
-                activeCategory === category
+                activeCategory === category.name
                   ? "border-ink bg-ink text-paper"
                   : "border-line text-muted hover:border-ink hover:text-ink"
               }`}
             >
-              {category}
+              {category.name}
             </button>
           ))}
         </div>
       </div>
 
-      {filtered.length > 0 ? (
+      {loading ? (
+        <p className="mt-16 text-center text-sm text-muted">Loading…</p>
+      ) : error ? (
+        <p className="mt-16 text-center text-sm text-muted">{error}</p>
+      ) : filtered.length > 0 ? (
         <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((doc) => (
-            <DocumentCard key={doc.id} doc={doc} />
+            <DocumentCard
+              key={doc.id}
+              doc={doc}
+              categoryName={
+                doc.category_id ? categoryMap.get(doc.category_id) : undefined
+              }
+            />
           ))}
         </div>
       ) : (
         <p className="mt-16 text-center text-sm text-muted">
-          No documents match your search.
+          {documents.length === 0
+            ? "No documents yet — check back soon."
+            : "No documents match your search."}
         </p>
       )}
     </main>
