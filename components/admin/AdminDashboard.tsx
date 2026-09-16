@@ -95,6 +95,38 @@ export default function AdminDashboard({
     setFormError(null);
   }
 
+  /**
+   * Every write goes through this first. getUser() (unlike getSession())
+   * round-trips to Supabase to validate the token server-side, so this
+   * catches an expired/missing session BEFORE we attempt a mutation —
+   * instead of the browser silently sending an unauthenticated request
+   * that Postgres then rejects with a generic RLS error.
+   */
+  async function requireFreshAdminSession(
+    supabase: NonNullable<ReturnType<typeof getSupabaseClient>>
+  ): Promise<string | null> {
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+
+    if (error || !user) {
+      return "Your session has expired. Please sign out and sign in again.";
+    }
+
+    const { data: adminRow, error: adminErr } = await supabase
+      .from("admins")
+      .select("user_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (adminErr || !adminRow) {
+      return "This account is signed in but is no longer an admin.";
+    }
+
+    return null;
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setFormError(null);
@@ -102,6 +134,12 @@ export default function AdminDashboard({
     const supabase = getSupabaseClient();
     if (!supabase) {
       setFormError("Marketplace isn't configured.");
+      return;
+    }
+
+    const sessionIssue = await requireFreshAdminSession(supabase);
+    if (sessionIssue) {
+      setFormError(sessionIssue);
       return;
     }
 
@@ -178,6 +216,12 @@ export default function AdminDashboard({
     const supabase = getSupabaseClient();
     if (!supabase) return;
 
+    const sessionIssue = await requireFreshAdminSession(supabase);
+    if (sessionIssue) {
+      setFormError(sessionIssue);
+      return;
+    }
+
     if (doc.thumbnail_path) {
       await supabase.storage.from("thumbnails").remove([doc.thumbnail_path]);
     }
@@ -192,6 +236,13 @@ export default function AdminDashboard({
   async function togglePublished(doc: MarketplaceDocument) {
     const supabase = getSupabaseClient();
     if (!supabase) return;
+
+    const sessionIssue = await requireFreshAdminSession(supabase);
+    if (sessionIssue) {
+      setFormError(sessionIssue);
+      return;
+    }
+
     await supabase
       .from("documents")
       .update({ published: !doc.published })
