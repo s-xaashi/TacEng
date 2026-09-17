@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import type { Category, MarketplaceDocument } from "@/lib/supabase/types";
 
@@ -259,13 +260,21 @@ export default function AdminDashboard({
             Manage marketplace documents.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onSignOut}
-          className="focus-ring rounded-full border border-line px-5 py-2 text-sm text-ink hover:border-ink"
-        >
-          Sign out
-        </button>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/admin/payments"
+            className="focus-ring rounded-full border border-line px-5 py-2 text-sm text-ink hover:border-ink"
+          >
+            Payments
+          </Link>
+          <button
+            type="button"
+            onClick={onSignOut}
+            className="focus-ring rounded-full border border-line px-5 py-2 text-sm text-ink hover:border-ink"
+          >
+            Sign out
+          </button>
+        </div>
       </div>
 
       {/* Create / Edit form */}

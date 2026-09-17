@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { getFreeDocumentUrl, getThumbnailUrl } from "@/lib/supabase/storage";
 import type { MarketplaceDocument } from "@/lib/supabase/types";
+import BuyModal from "./marketplace/BuyModal";
 
 export default function DocumentCard({
   doc,
@@ -12,6 +14,7 @@ export default function DocumentCard({
   categoryName?: string;
 }) {
   const thumbnailUrl = getThumbnailUrl(doc.thumbnail_path);
+  const [showBuyModal, setShowBuyModal] = useState(false);
 
   async function handleDownload() {
     if (!doc.is_free) return;
@@ -23,12 +26,6 @@ export default function DocumentCard({
     const url = getFreeDocumentUrl(doc.file_path);
     if (url) {
       window.open(url, "_blank", "noopener,noreferrer");
-    }
-  }
-
-  function handleBuy() {
-    if (doc.payment_link) {
-      window.open(doc.payment_link, "_blank", "noopener,noreferrer");
     }
   }
 
@@ -76,14 +73,22 @@ export default function DocumentCard({
         ) : (
           <button
             type="button"
-            onClick={handleBuy}
-            disabled={!doc.payment_link}
-            className="focus-ring rounded-full bg-gold px-5 py-2 text-sm font-medium text-paper transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={() => setShowBuyModal(true)}
+            className="focus-ring rounded-full bg-gold px-5 py-2 text-sm font-medium text-paper transition-colors hover:opacity-90"
           >
             Buy Now
           </button>
         )}
       </div>
+
+      {showBuyModal && (
+        <BuyModal
+          documentId={doc.id}
+          title={doc.title}
+          price={doc.price}
+          onClose={() => setShowBuyModal(false)}
+        />
+      )}
     </div>
   );
 }
