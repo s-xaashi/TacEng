@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import type { Category, MarketplaceDocument } from "@/lib/supabase/types";
+import ProjectsManager from "@/components/admin/ProjectsManager";
 
 type FormState = {
   id: string | null;
@@ -523,6 +524,7 @@ export default function AdminDashboard({
           </div>
         )}
       </div>
+      <ProjectsManager />
     </main>
   );
 }
