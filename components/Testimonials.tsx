@@ -24,31 +24,63 @@ export default function Testimonials(){
     const card=e.currentTarget, parent=area.current; if(!parent)return;
     const id=card.dataset.id;
     if(id) setFrontId(id);
+
     const startX=e.clientX,startY=e.clientY,rect=card.getBoundingClientRect(),pr=parent.getBoundingClientRect();
     const ox=rect.left-pr.left,oy=rect.top-pr.top;
+    let moved=false;
+
     card.setPointerCapture(e.pointerId);
-    const move=(ev:PointerEvent)=>{const x=Math.max(0,Math.min(pr.width-rect.width,ox+ev.clientX-startX));const y=Math.max(0,Math.min(pr.height-rect.height,oy+ev.clientY-startY));card.style.left=x+"px";card.style.top=y+"px";card.style.transform="rotate(0deg) scale(1.02)"};
+    card.style.transition="none";
+
+    const move=(ev:PointerEvent)=>{
+      const x=ox+ev.clientX-startX;
+      const y=oy+ev.clientY-startY;
+      if(Math.abs(ev.clientX-startX)>4 || Math.abs(ev.clientY-startY)>4) moved=true;
+      card.style.left=x+"px";
+      card.style.top=y+"px";
+      card.style.transform="rotate(0deg) scale(1.02)";
+    };
+
     const up=()=>{
       const current=card.getBoundingClientRect(), box=parent.getBoundingClientRect();
-      const outside=current.right < box.left-40 || current.left > box.right+40 || current.bottom < box.top-40 || current.top > box.bottom+40;
-      if(outside && id){
+      const centerX=current.left+current.width/2;
+      const centerY=current.top+current.height/2;
+      const thrownAway =
+        moved &&
+        (centerX < box.left-30 || centerX > box.right+30 || centerY < box.top-30 || centerY > box.bottom+30);
+
+      if(thrownAway && id){
         const idx=items.findIndex(x=>x.id===id);
-        setReturning(r=>({...r,[id]:true}));
-        card.style.transition="left .65s ease, top .65s ease, transform .65s ease, opacity .25s ease";
-        card.style.left=positions[(idx<0?0:idx)%positions.length].left;
-        card.style.top=positions[(idx<0?0:idx)%positions.length].top;
+        const target=positions[(idx<0?0:idx)%positions.length];
+
+        // Let the note fade away first, then smoothly float back to its home position.
+        card.style.transition="opacity .22s ease, transform .22s ease";
         card.style.opacity="0";
-        setTimeout(()=>{
-          card.style.opacity="1";
-          card.style.transition="";
-          setReturning(r=>{const n={...r};delete n[id];return n});
-        },650);
+        card.style.transform="scale(.92) rotate(0deg)";
+
+        window.setTimeout(()=>{
+          card.style.transition="none";
+          card.style.left=target.left;
+          card.style.top=target.top;
+          card.style.transform="scale(.96) rotate("+target.rotate+")";
+          window.requestAnimationFrame(()=>{
+            card.style.transition="left .55s cubic-bezier(.22,1,.36,1), top .55s cubic-bezier(.22,1,.36,1), transform .55s cubic-bezier(.22,1,.36,1), opacity .4s ease";
+            card.style.opacity="1";
+            window.setTimeout(()=>{ card.style.transition=""; },600);
+          });
+        },240);
       } else {
+        card.style.transition="transform .25s ease";
         card.style.transform="rotate("+((Math.random()*6)-3)+"deg)";
+        window.setTimeout(()=>{ card.style.transition=""; },260);
       }
-      window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up)
+
+      window.removeEventListener("pointermove",move);
+      window.removeEventListener("pointerup",up);
     };
-    window.addEventListener("pointermove",move);window.addEventListener("pointerup",up);
+
+    window.addEventListener("pointermove",move);
+    window.addEventListener("pointerup",up,{once:true});
   };
 
   const submit=async(e:React.FormEvent)=>{e.preventDefault(); if(!name.trim()||!comment.trim())return; const s=getSupabaseClient(); if(!s)return; setSending(true); const {error}=await s.from("testimonials").insert({name:name.trim().slice(0,80),rating,comment:comment.trim().slice(0,500),approved:false}); setSending(false); if(!error){setName("");setRating(5);setComment("");setSent(true)}};
