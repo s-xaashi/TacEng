@@ -17,14 +17,14 @@ export default function ResetPasswordPage() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
+    const client = getSupabaseClient();
+    if (!client) {
       setSessionState("invalid");
       return;
     }
 
     async function verifyRecovery() {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await client.auth.getSession();
       if (!session?.access_token) {
         setSessionState("invalid");
         return;
@@ -44,7 +44,7 @@ export default function ResetPasswordPage() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
+    } = client.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") verifyRecovery();
     });
 
