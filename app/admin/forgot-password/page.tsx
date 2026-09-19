@@ -3,9 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 
-const ADMIN_EMAIL = "salmaanmukhtaarxaashi@gmail.com";
-
 export default function ForgotPasswordPage() {
+  const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -13,23 +12,35 @@ export default function ForgotPasswordPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    const normalized = email.trim().toLowerCase();
+    if (!normalized) {
+      setError("Please enter your admin email address.");
+      return;
+    }
+
     setLoading(true);
 
     try {
       const response = await fetch("/api/admin/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: ADMIN_EMAIL }),
+        body: JSON.stringify({ email: normalized }),
       });
 
+      const data = await response.json().catch(() => null);
+
       if (!response.ok) {
-        setError("We couldn't send the reset email. Please try again.");
+        setError(
+          data?.error ||
+            "Password reset is temporarily unavailable. Please try again."
+        );
         return;
       }
 
       setSubmitted(true);
     } catch {
-      setError("We couldn't send the reset email. Please try again.");
+      setError("Password reset is temporarily unavailable. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -47,32 +58,43 @@ export default function ForgotPasswordPage() {
 
       {submitted ? (
         <p className="mt-4 text-sm text-ink">
-          If the admin account is configured correctly, a secure reset link
-          has been sent to the admin email address.
+          If this email belongs to a current admin account, a secure reset
+          link has been sent to it.
         </p>
       ) : (
         <>
           <p className="mt-2 text-sm text-muted">
-            A secure password reset link will be sent only to the current
-            admin email address.
+            Enter the email currently registered as an admin. The server will
+            verify it against the admin database before sending anything.
           </p>
 
-          <div className="mt-8 rounded-md border border-line bg-white/60 px-4 py-3">
-            <p className="text-xs text-muted">Current admin email</p>
-            <p className="mt-1 break-all text-sm font-medium text-ink">
-              {ADMIN_EMAIL}
-            </p>
-          </div>
+          <form onSubmit={handleSubmit} className="mt-8 grid gap-4">
+            <div>
+              <label htmlFor="email" className="text-sm text-muted">
+                Admin email address
+              </label>
+              <input
+                id="email"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                maxLength={254}
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@example.com"
+                className="focus-ring mt-1 w-full rounded-md border border-line bg-white/60 px-3 py-3 text-sm text-ink"
+              />
+            </div>
 
-          <form onSubmit={handleSubmit} className="mt-6">
-            {error && <p className="mb-4 text-sm text-red-700">{error}</p>}
+            {error && <p className="text-sm text-red-700">{error}</p>}
 
             <button
               type="submit"
               disabled={loading}
-              className="focus-ring w-full rounded-full bg-ink px-6 py-3 text-sm font-medium text-paper hover:bg-ink/85 disabled:opacity-50"
+              className="focus-ring mt-2 rounded-full bg-ink px-6 py-3 text-sm font-medium text-paper hover:bg-ink/85 disabled:opacity-50"
             >
-              {loading ? "Sending…" : "Send Reset Link"}
+              {loading ? "Checking…" : "Send Reset Link"}
             </button>
           </form>
         </>
