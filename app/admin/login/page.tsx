@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
+const ADMIN_EMAIL = "salmaanmukhtaarxaashi@gmail.com";
+
 export default function AdminLoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -22,15 +24,29 @@ export default function AdminLoginPage() {
       return;
     }
 
+    if (email.trim().toLowerCase() !== ADMIN_EMAIL) {
+      setError("Invalid admin credentials.");
+      return;
+    }
+
     setLoading(true);
     const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
+      email: ADMIN_EMAIL,
       password,
     });
     setLoading(false);
 
     if (signInError) {
-      setError(signInError.message);
+      setError("Invalid admin credentials.");
+      return;
+    }
+
+    const { data: isAdmin, error: adminCheckError } =
+      await supabase.rpc("is_admin");
+
+    if (adminCheckError || !isAdmin) {
+      await supabase.auth.signOut();
+      setError("Invalid admin credentials.");
       return;
     }
 
