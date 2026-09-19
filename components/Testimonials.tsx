@@ -68,7 +68,7 @@ export default function Testimonials(){
             card.style.opacity="1";
             window.setTimeout(()=>{ card.style.transition=""; },2300);
           });
-        },60000);
+        },20000);
       } else {
         card.style.transition="transform .25s ease";
         card.style.transform="rotate("+((Math.random()*6)-3)+"deg)";
