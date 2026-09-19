@@ -64,11 +64,11 @@ export default function Testimonials(){
           card.style.top=target.top;
           card.style.transform="scale(.96) rotate("+target.rotate+")";
           window.requestAnimationFrame(()=>{
-            card.style.transition="left 60s cubic-bezier(.22,1,.36,1), top 60s cubic-bezier(.22,1,.36,1), transform 60s cubic-bezier(.22,1,.36,1), opacity 3s ease";
+            card.style.transition="left 2s cubic-bezier(.22,1,.36,1), top 2s cubic-bezier(.22,1,.36,1), transform 2s cubic-bezier(.22,1,.36,1), opacity 1s ease";
             card.style.opacity="1";
-            window.setTimeout(()=>{ card.style.transition=""; },60300);
+            window.setTimeout(()=>{ card.style.transition=""; },2300);
           });
-        },240);
+        },60000);
       } else {
         card.style.transition="transform .25s ease";
         card.style.transform="rotate("+((Math.random()*6)-3)+"deg)";
