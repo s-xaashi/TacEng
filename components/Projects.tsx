@@ -3,14 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import type { PortfolioProject } from "@/lib/projects";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  { auth: { persistSession: false, autoRefreshToken: false } }
-);
+
 
 export default function Projects(){
   const [projects,setProjects]=useState<PortfolioProject[]>([]);
@@ -18,6 +14,8 @@ export default function Projects(){
 
   useEffect(()=>{
     let active=true;
+    const supabase = getSupabaseClient();
+    if (!supabase) { setProjects([]); return; }
     supabase.from("projects").select("id,title,description,tags,status,href,image_path,published")
       .eq("published",true).order("sort_order",{ascending:true}).order("created_at",{ascending:false})
       .then(({data,error})=>{
