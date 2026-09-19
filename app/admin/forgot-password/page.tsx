@@ -24,9 +24,21 @@ export default function ForgotPasswordPage() {
     // We intentionally show the same "check your email" message whether
     // or not this call errors (e.g. user not found) — never reveal
     // whether an email belongs to an account.
-    await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/admin/reset-password`,
+    // Always send production password-recovery links to the live site.
+    // Using window.location.origin can accidentally create localhost links
+    // when the reset request comes from a local/dev environment.
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://salmaan-portfolio.vercel.app";
+
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${siteUrl.replace(/\/$/, "")}/admin/reset-password`,
     });
+
+    if (resetError) {
+      setLoading(false);
+      setError("We couldn't send the reset email. Please try again.");
+      return;
+    }
+
     setLoading(false);
     setSubmitted(true);
   }
