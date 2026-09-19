@@ -18,7 +18,9 @@ export default function Testimonials(){
 
   useEffect(()=>{const s=getSupabaseClient(); if(!s)return; s.from("testimonials").select("id,name,rating,comment,approved").eq("approved",true).order("created_at",{ascending:false}).then(({data})=>setItems((data??[]) as Testimonial[]))},[]);
 
-  const bringToFront=(id:string)=>setFrontId(id);\n\n  const drag=(e:React.PointerEvent<HTMLDivElement>)=>{
+  const bringToFront=(id:string)=>setFrontId(id);
+
+  const drag=(e:React.PointerEvent<HTMLDivElement>)=>{
     const card=e.currentTarget, parent=area.current; if(!parent)return;
     const id=card.dataset.id;
     if(id) setFrontId(id);
