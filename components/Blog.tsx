@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 type Block={id?:string;type:"paragraph"|"heading"|"image"|"date"|"highlight";text?:string;image_path?:string;color?:string;level?:2|3};
@@ -14,7 +14,12 @@ export default function Blog(){
   s.from("blogs").select("id,title,excerpt,cover_image_path,published_at,blocks,section_id").eq("published",true).order("sort_order").order("published_at",{ascending:false})
  ]);setSections((secs??[]) as BlogSection[]);setPosts((items??[]) as BlogPost[])};
  useEffect(()=>{load()},[]);
- useEffect(()=>{document.body.style.overflow=active?"hidden":"";return()=>{document.body.style.overflow=""}},[active]);
+ useEffect(()=>{
+  document.body.style.overflow=active?"hidden":"";
+  const onKeyDown=(event:KeyboardEvent)=>{if(event.key==="Escape")setActive(null)};
+  if(active)window.addEventListener("keydown",onKeyDown);
+  return()=>{document.body.style.overflow="";window.removeEventListener("keydown",onKeyDown)};
+ },[active]);
  const url=(path?:string|null)=>{if(!path)return null;const s=getSupabaseClient();return s?.storage.from("thumbnails").getPublicUrl(path).data.publicUrl??null};
  return <section id="blog" className="site-section section-divider">
   <div className="flex items-end justify-between gap-5"><div><p className="hand text-xl text-[#e45560]">From my journal</p><h2 className="mt-1 font-display text-4xl sm:text-5xl">Blogs.</h2><p className="mt-3 max-w-xl text-sm leading-6 text-white/50">Ideas, lessons, experiments and everyday observations — written in my own space.</p></div><span className="hidden rounded-full border border-white/10 px-3 py-1 text-[10px] uppercase tracking-[.2em] text-white/40 sm:block">Articles</span></div>
@@ -25,6 +30,19 @@ export default function Blog(){
    </div>})}
    {posts.length===0&&<div className="rounded-3xl border border-white/10 bg-white/[.025] p-10 text-center text-sm text-white/45">New articles will appear here.</div>}
   </div>
-  {active&&<div className="blog-modal fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto bg-black/80 p-4 backdrop-blur-md sm:p-6" role="dialog" aria-modal="true" aria-label={active.title} onMouseDown={e=>{if(e.target===e.currentTarget)setActive(null)}}><article className="blog-reader relative my-auto flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-[2rem]"><div className="blog-reader-scroll overflow-y-auto"><div className="blog-reader-header sticky top-0 z-10 flex justify-end px-4 pt-4 pointer-events-none"><button type="button" onClick={()=>setActive(null)} aria-label="Close article" className="blog-close pointer-events-auto">×</button></div><div className="px-7 pb-8 sm:px-10 sm:pb-10">{active.cover_image_path&&url(active.cover_image_path)&&<img src={url(active.cover_image_path)!} alt="" className="mb-8 max-h-[360px] w-full rounded-2xl object-cover"/>}<p className="hand text-xl text-[#e45560]">BLOG</p><h2 className="mt-2 font-display text-4xl leading-tight text-white sm:text-5xl">{active.title}</h2>{active.published_at&&<time className="mt-4 block text-xs uppercase tracking-[.18em] text-white/35">{new Date(active.published_at).toLocaleDateString()}</time>}<div className="blog-prose mt-9">{active.blocks.map((b,i)=>b.type==="heading"?<h3 key={i} className={b.level===3?"blog-h3":"blog-h2"}>{b.text}</h3>:b.type==="paragraph"?<p key={i}>{b.text}</p>:b.type==="date"?<time key={i} className="blog-date">{b.text}</time>:b.type==="highlight"?<div key={i} className="blog-highlight" style={{borderColor:(b.color??"#e45560")+"99",background:(b.color??"#e45560")+"1c"}}>{b.text}</div>:b.type==="image"&&url(b.image_path)?<figure key={i}><img src={url(b.image_path)!} alt="" className="w-full rounded-2xl"/>{b.text&&<figcaption>{b.text}</figcaption>}</figure>:null)}</div></div></div></article></div>}
+  {active&&<div className="blog-modal fixed inset-0 z-[200] grid place-items-center overflow-hidden bg-black/80 p-3 backdrop-blur-md sm:p-6" role="dialog" aria-modal="true" aria-label={active.title} onMouseDown={e=>{if(e.target===e.currentTarget)setActive(null)}}>
+    <article className="blog-reader relative flex h-[calc(100dvh-1.5rem)] max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-[2rem] sm:h-[92dvh] sm:max-h-[900px]">
+      <button type="button" onClick={()=>setActive(null)} aria-label="Close article" className="blog-close absolute right-3 top-3 z-20 sm:right-4 sm:top-4">×</button>
+      <div className="blog-reader-scroll min-h-0 flex-1 overflow-y-auto">
+        <div className="px-7 pb-8 pt-16 sm:px-10 sm:pb-10 sm:pt-20">
+          {active.cover_image_path&&url(active.cover_image_path)&&<img src={url(active.cover_image_path)!} alt="" className="mb-8 max-h-[360px] w-full rounded-2xl object-cover"/>}
+          <p className="hand text-xl text-[#e45560]">BLOG</p>
+          <h2 className="mt-2 font-display text-4xl leading-tight text-white sm:text-5xl">{active.title}</h2>
+          {active.published_at&&<time className="mt-4 block text-xs uppercase tracking-[.18em] text-white/35">{new Date(active.published_at).toLocaleDateString()}</time>}
+          <div className="blog-prose mt-9">{active.blocks.map((b,i)=>b.type==="heading"?<h3 key={i} className={b.level===3?"blog-h3":"blog-h2"}>{b.text}</h3>:b.type==="paragraph"?<p key={i}>{b.text}</p>:b.type==="date"?<time key={i} className="blog-date">{b.text}</time>:b.type==="highlight"?<div key={i} className="blog-highlight" style={{borderColor:(b.color??"#e45560")+"99",background:(b.color??"#e45560")+"1c"}}>{b.text}</div>:b.type==="image"&&url(b.image_path)?<figure key={i}><img src={url(b.image_path)!} alt="" className="w-full rounded-2xl"/>{b.text&&<figcaption>{b.text}</figcaption>}</figure>:null)}</div>
+        </div>
+      </div>
+    </article>
+  </div>}
  </section>
 }
