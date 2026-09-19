@@ -1,65 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import type { User } from "@supabase/supabase-js";
-import { getSupabaseClient } from "@/lib/supabase/client";
+import { useAdminAuth } from "@/lib/supabase/useAdminAuth";
+import AdminShell from "@/components/admin/AdminShell";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 
-type AuthState = "checking" | "signed-out" | "not-admin" | "admin";
-
 export default function AdminPage() {
-  const router = useRouter();
-  const [state, setState] = useState<AuthState>("checking");
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      setState("signed-out");
-      return;
-    }
-
-    let cancelled = false;
-
-    async function check() {
-      const {
-        data: { user: currentUser },
-      } = await supabase!.auth.getUser();
-
-      if (cancelled) return;
-
-      if (!currentUser) {
-        setState("signed-out");
-        router.push("/admin/login");
-        return;
-      }
-
-      setUser(currentUser);
-
-      // Authorization: the admins table itself is the source of truth
-      // (enforced via RLS on every write) — this check just drives the UI.
-      const { data: adminRow } = await supabase!
-        .from("admins")
-        .select("user_id")
-        .eq("user_id", currentUser.id)
-        .maybeSingle();
-
-      if (cancelled) return;
-      setState(adminRow ? "admin" : "not-admin");
-    }
-
-    check();
-    return () => {
-      cancelled = true;
-    };
-  }, [router]);
-
-  async function handleSignOut() {
-    const supabase = getSupabaseClient();
-    await supabase?.auth.signOut();
-    router.push("/admin/login");
-  }
+  const { state, user, signOut } = useAdminAuth();
 
   if (state === "checking" || state === "signed-out") {
     return (
@@ -80,7 +26,7 @@ export default function AdminPage() {
         </p>
         <button
           type="button"
-          onClick={handleSignOut}
+          onClick={signOut}
           className="focus-ring mt-6 rounded-full border border-line px-5 py-2 text-sm text-ink hover:border-ink"
         >
           Sign out
@@ -89,5 +35,9 @@ export default function AdminPage() {
     );
   }
 
-  return <AdminDashboard onSignOut={handleSignOut} />;
+  return (
+    <AdminShell onSignOut={signOut}>
+      <AdminDashboard />
+    </AdminShell>
+  );
 }

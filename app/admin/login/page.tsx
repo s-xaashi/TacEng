@@ -74,6 +74,14 @@ export default function AdminLoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             className="focus-ring mt-1 w-full rounded-md border border-line bg-white/60 px-3 py-2 text-sm text-ink"
           />
+          <div className="mt-2 text-right">
+            <Link
+              href="/admin/forgot-password"
+              className="focus-ring text-xs text-muted hover:text-ink"
+            >
+              Forgot password?
+            </Link>
+          </div>
         </div>
 
         {error && <p className="text-sm text-red-700">{error}</p>}

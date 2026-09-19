@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 type PurchaseWithDoc = {
@@ -52,17 +51,9 @@ export default function PurchasesDashboard() {
 
   return (
     <main className="mx-auto min-h-screen max-w-content px-6 py-12">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-3xl text-ink">Payments</h1>
-          <p className="mt-1 text-sm text-muted">All marketplace purchases.</p>
-        </div>
-        <Link
-          href="/admin"
-          className="focus-ring rounded-full border border-line px-5 py-2 text-sm text-ink hover:border-ink"
-        >
-          ← Documents
-        </Link>
+      <div>
+        <h1 className="font-display text-3xl text-ink">Payments</h1>
+        <p className="mt-1 text-sm text-muted">All marketplace purchases.</p>
       </div>
 
       <div className="mt-6 flex flex-wrap gap-2">

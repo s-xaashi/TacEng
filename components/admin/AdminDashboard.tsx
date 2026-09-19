@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import Link from "next/link";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import type { Category, MarketplaceDocument } from "@/lib/supabase/types";
 
@@ -37,11 +36,7 @@ const emptyForm: FormState = {
   existingIsFree: null,
 };
 
-export default function AdminDashboard({
-  onSignOut,
-}: {
-  onSignOut: () => void;
-}) {
+export default function AdminDashboard() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [documents, setDocuments] = useState<MarketplaceDocument[]>([]);
   const [loading, setLoading] = useState(true);
@@ -253,28 +248,9 @@ export default function AdminDashboard({
 
   return (
     <main className="mx-auto min-h-screen max-w-content px-6 py-12">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-3xl text-ink">Admin Dashboard</h1>
-          <p className="mt-1 text-sm text-muted">
-            Manage marketplace documents.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/admin/payments"
-            className="focus-ring rounded-full border border-line px-5 py-2 text-sm text-ink hover:border-ink"
-          >
-            Payments
-          </Link>
-          <button
-            type="button"
-            onClick={onSignOut}
-            className="focus-ring rounded-full border border-line px-5 py-2 text-sm text-ink hover:border-ink"
-          >
-            Sign out
-          </button>
-        </div>
+      <div>
+        <h1 className="font-display text-3xl text-ink">Admin Dashboard</h1>
+        <p className="mt-1 text-sm text-muted">Manage marketplace documents.</p>
       </div>
 
       {/* Create / Edit form */}
