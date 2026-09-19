@@ -6,6 +6,7 @@ import type { Category, MarketplaceDocument } from "@/lib/supabase/types";
 import ProjectsManager from "@/components/admin/ProjectsManager";
 import PortfolioContentManager from "@/components/admin/PortfolioContentManager";
 import ExperienceManager from "@/components/admin/ExperienceManager";
+import BlogManager from "@/components/admin/BlogManager";
 
 type FormState = {
   id: string | null;
@@ -505,6 +506,7 @@ export default function AdminDashboard() {
       <ProjectsManager />
       <PortfolioContentManager />
       <ExperienceManager />
+      <BlogManager />
     </main>
   );
 }
