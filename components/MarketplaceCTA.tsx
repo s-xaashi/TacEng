@@ -1,22 +1,2 @@
 import Link from "next/link";
-
-export default function MarketplaceCTA() {
-  return (
-    <section className="border-t border-line bg-pine-dark">
-      <div className="mx-auto max-w-content px-6 py-20 text-center">
-        <h2 className="font-display text-3xl text-paper sm:text-4xl">
-          Looking for a document?
-        </h2>
-        <p className="mx-auto mt-4 max-w-md text-base text-paper/80">
-          Explore the document marketplace and find the resources you need.
-        </p>
-        <Link
-          href="/marketplace"
-          className="focus-ring mt-8 inline-block rounded-full bg-paper px-7 py-3 text-sm font-medium text-ink transition-opacity hover:opacity-90"
-        >
-          Visit Marketplace →
-        </Link>
-      </div>
-    </section>
-  );
-}
+export default function MarketplaceCTA(){return <section className="site-section"><div className="red-card relative overflow-hidden rounded-[2rem] px-7 py-12 text-center sm:px-12 sm:py-16"><span className="doodle left-8 top-6 text-5xl">✦</span><span className="doodle right-8 bottom-5 text-4xl">⌁</span><p className="hand text-xl text-white/70">Need a document?</p><h2 className="mt-2 font-display text-4xl sm:text-6xl">Visit the Marketplace.</h2><p className="mx-auto mt-4 max-w-lg text-sm leading-7 text-white/65">Explore documents and resources published through my document marketplace.</p><Link href="/marketplace" className="focus-ring mt-8 inline-flex rounded-full bg-[#fff5e9] px-7 py-3 text-sm font-semibold text-[#1a0708] hover:-translate-y-1">Open Marketplace ↗</Link></div></section>}
