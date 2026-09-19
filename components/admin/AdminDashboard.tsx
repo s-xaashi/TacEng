@@ -8,6 +8,7 @@ import PortfolioContentManager from "@/components/admin/PortfolioContentManager"
 import ExperienceManager from "@/components/admin/ExperienceManager";
 import BlogManager from "@/components/admin/BlogManager";
 import LearningManager from "@/components/admin/LearningManager";
+import TestimonialsManager from "@/components/admin/TestimonialsManager";
 
 type FormState = {
   id: string | null;
@@ -509,6 +510,7 @@ export default function AdminDashboard() {
       <ExperienceManager />
       <LearningManager />
       <BlogManager />
+      <TestimonialsManager />
     </main>
   );
 }
