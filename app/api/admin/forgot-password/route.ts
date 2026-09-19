@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
+import { createHash } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 
-const ADMIN_EMAIL = "salmaanmukhtaarxaashi@gmail.com";
+export const runtime = "nodejs";
+
 const RESET_URL = "https://salmaan-portfolio.vercel.app/admin/reset-password";
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 function getAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -20,21 +23,50 @@ function getAdminClient() {
   });
 }
 
-export async function POST(request: Request) {
-  let email = "";
+function getClientIp(request: Request) {
+  const forwarded = request.headers.get("x-forwarded-for");
+  return (forwarded?.split(",")[0] || request.headers.get("x-real-ip") || "unknown").trim();
+}
 
-  try {
-    const body = await request.json();
-    email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
-  } catch {
-    email = "";
+function genericResponse() {
+  return NextResponse.json({
+    ok: true,
+    message:
+      "If this email belongs to a current admin account, a secure reset link has been sent to it.",
+  });
+}
+
+export async function POST(request: Request) {
+  // Only accept same-origin browser requests. This reduces cross-site abuse
+  // of the reset-email endpoint; the database rate limit is the stronger control.
+  const origin = request.headers.get("origin");
+  if (origin && origin !== "https://salmaan-portfolio.vercel.app") {
+    return NextResponse.json({ ok: false, error: "Invalid request origin." }, { status: 403 });
   }
 
-  // Always return the same generic response for unknown addresses.
-  // The actual authorization check happens only on the server.
-  const genericResponse = NextResponse.json({ ok: true });
+  const contentLength = Number(request.headers.get("content-length") || "0");
+  if (contentLength > 4096) {
+    return NextResponse.json({ ok: false, error: "Request is too large." }, { status: 413 });
+  }
 
-  if (email !== ADMIN_EMAIL) return genericResponse;
+  let email = "";
+  try {
+    const body = await request.json();
+    email =
+      typeof body?.email === "string"
+        ? body.email.normalize("NFKC").trim().toLowerCase()
+        : "";
+  } catch {
+    return NextResponse.json({ ok: false, error: "Invalid request." }, { status: 400 });
+  }
+
+  // Strict shape/length checks happen before any database/Auth work.
+  if (email.length < 6 || email.length > 254 || !EMAIL_RE.test(email)) {
+    return NextResponse.json(
+      { ok: false, error: "Enter a valid email address." },
+      { status: 400 }
+    );
+  }
 
   const supabase = getAdminClient();
   if (!supabase) {
@@ -44,40 +76,75 @@ export async function POST(request: Request) {
     );
   }
 
-  // The public.admins table is the authorization source of truth.
-  // We also verify that the admin row points to the exact Auth user
-  // whose email is the one allowed above.
+  const ip = getClientIp(request);
+  const ipKey = createHash("sha256").update("ip:" + ip).digest("hex");
+  const emailKey = createHash("sha256").update("email:" + email).digest("hex");
+
+  // Two independent limits: per IP and per email. The database function
+  // uses a row lock, making the check safe against concurrent requests.
+  const [ipLimit, emailLimit] = await Promise.all([
+    supabase.rpc("check_admin_reset_rate_limit", {
+      p_key: ipKey,
+      p_window_seconds: 900,
+      p_max_requests: 10,
+    }),
+    supabase.rpc("check_admin_reset_rate_limit", {
+      p_key: emailKey,
+      p_window_seconds: 900,
+      p_max_requests: 3,
+    }),
+  ]);
+
+  if (ipLimit.error || emailLimit.error) {
+    return NextResponse.json(
+      { ok: false, error: "Password reset is temporarily unavailable." },
+      { status: 503 }
+    );
+  }
+
+  if (!ipLimit.data || !emailLimit.data) {
+    // Do not reveal whether the email is an admin. This avoids account
+    // enumeration while still giving the browser a normal success response.
+    return genericResponse();
+  }
+
+  // Authorization source of truth: public.admins. The browser never gets
+  // direct access to auth.users. We resolve each authorized user server-side
+  // and compare its verified Auth email.
   const { data: adminRows, error: adminError } = await supabase
     .from("admins")
     .select("user_id");
 
-  if (adminError || !adminRows || adminRows.length !== 1) {
+  if (adminError || !adminRows) {
     return NextResponse.json(
       { ok: false, error: "Password reset is temporarily unavailable." },
       { status: 503 }
     );
   }
 
-  const adminUserId = adminRows[0].user_id;
-  const { data: userData, error: userError } =
-    await supabase.auth.admin.getUserById(adminUserId);
+  let matchingUserId: string | null = null;
 
-  if (
-    userError ||
-    !userData.user ||
-    userData.user.id !== adminUserId ||
-    (userData.user.email || "").trim().toLowerCase() !== ADMIN_EMAIL
-  ) {
-    return NextResponse.json(
-      { ok: false, error: "Password reset is temporarily unavailable." },
-      { status: 503 }
-    );
+  for (const row of adminRows) {
+    if (!row.user_id) continue;
+
+    const { data: userData, error: userError } =
+      await supabase.auth.admin.getUserById(row.user_id);
+
+    if (userError || !userData.user) continue;
+
+    const authEmail = (userData.user.email || "").trim().toLowerCase();
+    if (authEmail === email) {
+      matchingUserId = userData.user.id;
+      break;
+    }
   }
 
-  // This is executed server-side with the secret key, so a browser cannot
-  // ask Supabase to send reset emails to arbitrary addresses.
+  if (!matchingUserId) {
+    return genericResponse();
+  }
+
   const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-    ADMIN_EMAIL,
+    email,
     { redirectTo: RESET_URL }
   );
 
@@ -88,5 +155,5 @@ export async function POST(request: Request) {
     );
   }
 
-  return genericResponse;
+  return genericResponse();
 }
