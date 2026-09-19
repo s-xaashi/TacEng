@@ -1,34 +1,22 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-  content: [
-    "./app/**/*.{ts,tsx}",
-    "./components/**/*.{ts,tsx}",
-  ],
+  content: ["./app/**/*.{ts,tsx}","./components/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        paper: "#FAFAF7",
-        ink: "#14181F",
-        muted: "#5B6472",
-        line: "#E4E1DA",
-        pine: {
-          DEFAULT: "#2F5D50",
-          dark: "#213F37",
-          light: "#EAF1EE",
-        },
-        gold: {
-          DEFAULT: "#B8862E",
-          light: "#F6EEDD",
-        },
+        paper: "#120504",
+        ink: "#FFF5E9",
+        muted: "#BDA7A0",
+        line: "rgba(255,245,233,.12)",
+        pine: { DEFAULT:"#C63F4C", dark:"#3A0D11", light:"#2A0E10" },
+        gold: { DEFAULT:"#D8E06B", light:"#3A3C18" },
       },
       fontFamily: {
-        display: ["var(--font-display)", "serif"],
-        body: ["var(--font-body)", "sans-serif"],
+        display: ["var(--font-display)","serif"],
+        body: ["var(--font-body)","sans-serif"],
       },
-      maxWidth: {
-        content: "72rem",
-      },
+      maxWidth: { content:"72rem" },
     },
   },
   plugins: [],
