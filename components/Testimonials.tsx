@@ -20,6 +20,8 @@ export default function Testimonials(){
 
   const bringToFront=(id:string)=>setFrontId(id);\n\n  const drag=(e:React.PointerEvent<HTMLDivElement>)=>{
     const card=e.currentTarget, parent=area.current; if(!parent)return;
+    const id=card.dataset.id;
+    if(id) setFrontId(id);
     const startX=e.clientX,startY=e.clientY,rect=card.getBoundingClientRect(),pr=parent.getBoundingClientRect();
     const ox=rect.left-pr.left,oy=rect.top-pr.top;
     card.setPointerCapture(e.pointerId);
