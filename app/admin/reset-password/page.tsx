@@ -37,8 +37,11 @@ export default function ResetPasswordPage() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") setSessionState("valid");
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        const email = (session?.user?.email || "").trim().toLowerCase();
+        setSessionState(email === ADMIN_EMAIL ? "valid" : "invalid");
+      }
     });
 
     return () => subscription.unsubscribe();
