@@ -37,13 +37,31 @@ function genericResponse() {
 }
 
 export async function POST(request: Request) {
-  // Only accept same-origin browser requests. This reduces cross-site abuse
-  // of the reset-email endpoint; the database rate limit is the stronger control.
+  // Accept the production site and Vercel preview deployments that are
+  // serving this exact API request. The previous check only allowed the
+  // production origin, which incorrectly rejected legitimate preview URLs.
   const origin = request.headers.get("origin");
-  if (origin && origin !== "https://salmaan-portfolio.vercel.app") {
-    return NextResponse.json({ ok: false, error: "Invalid request origin." }, { status: 403 });
-  }
+  if (origin) {
+    let requestOrigin = "";
+    try {
+      requestOrigin = new URL(request.url).origin;
+    } catch {
+      return NextResponse.json(
+        { ok: false, error: "Invalid request." },
+        { status: 400 }
+      );
+    }
 
+    if (
+      origin !== "https://salmaan-portfolio.vercel.app" &&
+      origin !== requestOrigin
+    ) {
+      return NextResponse.json(
+        { ok: false, error: "Invalid request origin." },
+        { status: 403 }
+      );
+    }
+  }
   const contentLength = Number(request.headers.get("content-length") || "0");
   if (contentLength > 4096) {
     return NextResponse.json({ ok: false, error: "Request is too large." }, { status: 413 });
