@@ -14,17 +14,36 @@ const positions = [
 export default function Testimonials(){
   const [items,setItems]=useState<Testimonial[]>([]);
   const [name,setName]=useState(""); const [rating,setRating]=useState(5); const [comment,setComment]=useState("");
-  const [sent,setSent]=useState(false); const [sending,setSending]=useState(false); const area=useRef<HTMLDivElement>(null);
+  const [sent,setSent]=useState(false); const [sending,setSending]=useState(false); const area=useRef<HTMLDivElement>(null); const [frontId,setFrontId]=useState<string|null>(null); const [returning,setReturning]=useState<Record<string,boolean>>({});
 
   useEffect(()=>{const s=getSupabaseClient(); if(!s)return; s.from("testimonials").select("id,name,rating,comment,approved").eq("approved",true).order("created_at",{ascending:false}).then(({data})=>setItems((data??[]) as Testimonial[]))},[]);
 
-  const drag=(e:React.PointerEvent<HTMLDivElement>)=>{
+  const bringToFront=(id:string)=>setFrontId(id);\n\n  const drag=(e:React.PointerEvent<HTMLDivElement>)=>{
     const card=e.currentTarget, parent=area.current; if(!parent)return;
     const startX=e.clientX,startY=e.clientY,rect=card.getBoundingClientRect(),pr=parent.getBoundingClientRect();
     const ox=rect.left-pr.left,oy=rect.top-pr.top;
     card.setPointerCapture(e.pointerId);
     const move=(ev:PointerEvent)=>{const x=Math.max(0,Math.min(pr.width-rect.width,ox+ev.clientX-startX));const y=Math.max(0,Math.min(pr.height-rect.height,oy+ev.clientY-startY));card.style.left=x+"px";card.style.top=y+"px";card.style.transform="rotate(0deg) scale(1.02)"};
-    const up=()=>{card.style.transform="rotate("+((Math.random()*6)-3)+"deg)";window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up)};
+    const up=()=>{
+      const current=card.getBoundingClientRect(), box=parent.getBoundingClientRect();
+      const outside=current.right < box.left-40 || current.left > box.right+40 || current.bottom < box.top-40 || current.top > box.bottom+40;
+      if(outside && id){
+        const idx=items.findIndex(x=>x.id===id);
+        setReturning(r=>({...r,[id]:true}));
+        card.style.transition="left .65s ease, top .65s ease, transform .65s ease, opacity .25s ease";
+        card.style.left=positions[(idx<0?0:idx)%positions.length].left;
+        card.style.top=positions[(idx<0?0:idx)%positions.length].top;
+        card.style.opacity="0";
+        setTimeout(()=>{
+          card.style.opacity="1";
+          card.style.transition="";
+          setReturning(r=>{const n={...r};delete n[id];return n});
+        },650);
+      } else {
+        card.style.transform="rotate("+((Math.random()*6)-3)+"deg)";
+      }
+      window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up)
+    };
     window.addEventListener("pointermove",move);window.addEventListener("pointerup",up);
   };
 
@@ -49,7 +68,7 @@ export default function Testimonials(){
         <div ref={area} className="relative min-h-[500px] overflow-hidden rounded-[2rem] border border-white/10 bg-[#170607] shadow-2xl">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(198,63,76,.16),transparent_60%)]"/>
           {items.length===0&&<div className="absolute inset-0 flex items-center justify-center px-8 text-center text-sm text-white/35">Be the first to leave a kind note. 😊</div>}
-          {items.map((x,i)=><article key={x.id} onPointerDown={drag} className="absolute w-[72%] max-w-[300px] cursor-grab touch-none select-none rounded-2xl border border-white/10 bg-[#2a0d10]/95 p-5 shadow-xl backdrop-blur-md active:cursor-grabbing" style={{left:positions[i%positions.length].left,top:positions[i%positions.length].top,transform:"rotate("+positions[i%positions.length].rotate+")"}}><div className="flex items-center justify-between gap-3"><span className="font-semibold text-white">{x.name}</span><span className="text-[#d8e06b] text-sm">{"★".repeat(x.rating)}</span></div><p className="mt-3 text-sm leading-6 text-white/70">“{x.comment}”</p><p className="mt-3 text-xs text-white/30">😊</p></article>)}
+          {items.map((x,i)=><article key={x.id} data-id={x.id} onPointerDown={drag} onClick={()=>bringToFront(x.id)} className={"absolute w-[72%] max-w-[300px] cursor-grab touch-none select-none rounded-2xl border border-white/10 bg-[#2a0d10]/95 p-5 shadow-xl backdrop-blur-md transition-shadow active:cursor-grabbing "+(frontId===x.id?"ring-1 ring-[#e45560]/50":"")} style={{left:positions[i%positions.length].left,top:positions[i%positions.length].top,transform:"rotate("+positions[i%positions.length].rotate+")",zIndex:frontId===x.id?100:i+1,opacity:returning[x.id]?0:1}}><div className="flex items-center justify-between gap-3"><span className="font-semibold text-white">{x.name}</span><span className="text-[#d8e06b] text-sm">{"★".repeat(x.rating)}</span></div><p className="mt-3 text-sm leading-6 text-white/70">“{x.comment}”</p><p className="mt-3 text-xs text-white/30">😊</p></article>)}
         </div>
       </div>
     </div>
