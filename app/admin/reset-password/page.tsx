@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import PasswordField from "@/components/admin/PasswordField";
 import { validatePassword, passwordStrength } from "@/lib/passwordPolicy";
 
@@ -23,8 +24,8 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    async function verifyRecovery() {
-      const { data: { session } } = await client.auth.getSession();
+    async function verifyRecovery(supabase: SupabaseClient) {
+      const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
         setSessionState("invalid");
         return;
@@ -40,12 +41,12 @@ export default function ResetPasswordPage() {
     // The recovery token is verified by Supabase Auth, then the server
     // independently verifies that this Auth user is currently listed in
     // public.admins. No email address is hardcoded here.
-    verifyRecovery();
+    verifyRecovery(client);
 
     const {
       data: { subscription },
     } = client.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") verifyRecovery();
+      if (event === "PASSWORD_RECOVERY") verifyRecovery(client);
     });
 
     return () => subscription.unsubscribe();
