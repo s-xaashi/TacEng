@@ -2,7 +2,7 @@
 import {useEffect,useState} from "react";
 import Link from "next/link";
 
-const links=[{label:"Home",href:"#home"},{label:"Projects",href:"#projects"},{label:"About",href:"#about"},{label:"Blog",href:"#education"},{label:"Contact",href:"#contact"}];
+const links=[{label:"Home",href:"#home"},{label:"Projects",href:"#projects"},{label:"About",href:"#about"},{label:"Blog",href:"#blog"},{label:"Contact",href:"#contact"}];
 
 export default function Navbar(){
   const[open,setOpen]=useState(false),[scrolled,setScrolled]=useState(false);
