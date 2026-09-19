@@ -9,6 +9,8 @@ import { validatePassword, passwordStrength } from "@/lib/passwordPolicy";
 type SessionState = "checking" | "valid" | "invalid";
 
 export default function ResetPasswordPage() {
+  const ADMIN_EMAIL = "salmaanmukhtaarxaashi@gmail.com";
+
   const [sessionState, setSessionState] = useState<SessionState>("checking");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -28,8 +30,9 @@ export default function ResetPasswordPage() {
     // treat "a session exists" as "the recovery link was valid" — without
     // it, updateUser() below will fail on its own regardless, but we check
     // up front so the form doesn't even show for an expired/invalid link.
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSessionState(session ? "valid" : "invalid");
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      const email = (user?.email || "").trim().toLowerCase();
+      setSessionState(email === ADMIN_EMAIL ? "valid" : "invalid");
     });
 
     const {
