@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 type Block={id?:string;type:"paragraph"|"heading"|"image"|"date"|"highlight";text?:string;image_path?:string;color?:string;level?:2|3};
@@ -30,7 +31,7 @@ export default function Blog(){
    </div>})}
    {posts.length===0&&<div className="rounded-3xl border border-white/10 bg-white/[.025] p-10 text-center text-sm text-white/45">New articles will appear here.</div>}
   </div>
-  {active&&<div className="blog-modal fixed inset-0 z-[200] grid place-items-center overflow-hidden bg-black/80 p-3 backdrop-blur-md sm:p-6" role="dialog" aria-modal="true" aria-label={active.title} onMouseDown={e=>{if(e.target===e.currentTarget)setActive(null)}}>
+  {active&&typeof document !== "undefined"&&createPortal(<div className="blog-modal fixed inset-0 z-[200] grid place-items-center overflow-hidden bg-black/80 p-3 backdrop-blur-md sm:p-6" role="dialog" aria-modal="true" aria-label={active.title} onMouseDown={e=>{if(e.target===e.currentTarget)setActive(null)}}>
     <article className="blog-reader relative flex h-[calc(100dvh-1.5rem)] max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-[2rem] sm:h-[92dvh] sm:max-h-[900px]">
       <button type="button" onClick={()=>setActive(null)} aria-label="Close article" className="blog-close absolute right-3 top-3 z-20 sm:right-4 sm:top-4">×</button>
       <div className="blog-reader-scroll min-h-0 flex-1 overflow-y-auto">
@@ -43,6 +44,6 @@ export default function Blog(){
         </div>
       </div>
     </article>
-  </div>}
+  </div>, document.body)}
  </section>
 }
