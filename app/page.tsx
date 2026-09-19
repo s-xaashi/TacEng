@@ -8,6 +8,7 @@ import Projects from "@/components/Projects";
 import Blog from "@/components/Blog";
 import MarketplaceCTA from "@/components/MarketplaceCTA";
 import Contact from "@/components/Contact";
+import Testimonials from "@/components/Testimonials";
 import Footer from "@/components/Footer";
 import ScrollReveal from "@/components/ScrollReveal";
 import Highlight from "@/components/Highlight";
@@ -24,7 +25,8 @@ export default function Home(){
     <Blog key="blog"/>,
     <Education key="education"/>,
     <MarketplaceCTA key="marketplace"/>,
-    <Contact key="contact"/>
+    <Contact key="contact"/>,
+    <Testimonials key="testimonials"/>
   ];
   return <main><Navbar/><Hero/>{sections.map((section,index)=><ScrollReveal key={index}>{section}</ScrollReveal>)}<Footer/></main>
 }
