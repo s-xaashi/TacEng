@@ -9,8 +9,6 @@ import { validatePassword, passwordStrength } from "@/lib/passwordPolicy";
 type SessionState = "checking" | "valid" | "invalid";
 
 export default function ResetPasswordPage() {
-  const ADMIN_EMAIL = "salmaanmukhtaarxaashi@gmail.com";
-
   const [sessionState, setSessionState] = useState<SessionState>("checking");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -25,23 +23,29 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    // supabase-js parses the recovery link's URL on load and establishes
-    // a session automatically (detectSessionInUrl, on by default). We
-    // treat "a session exists" as "the recovery link was valid" — without
-    // it, updateUser() below will fail on its own regardless, but we check
-    // up front so the form doesn't even show for an expired/invalid link.
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      const email = (user?.email || "").trim().toLowerCase();
-      setSessionState(email === ADMIN_EMAIL ? "valid" : "invalid");
-    });
+    async function verifyRecovery() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setSessionState("invalid");
+        return;
+      }
+
+      const response = await fetch("/api/admin/recovery-authorized", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      setSessionState(response.ok ? "valid" : "invalid");
+    }
+
+    // The recovery token is verified by Supabase Auth, then the server
+    // independently verifies that this Auth user is currently listed in
+    // public.admins. No email address is hardcoded here.
+    verifyRecovery();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "PASSWORD_RECOVERY") {
-        const email = (session?.user?.email || "").trim().toLowerCase();
-        setSessionState(email === ADMIN_EMAIL ? "valid" : "invalid");
-      }
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") verifyRecovery();
     });
 
     return () => subscription.unsubscribe();
