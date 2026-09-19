@@ -1,53 +1,8 @@
 import Link from "next/link";
-import { projects } from "@/data/projects";
-
-export default function Projects() {
-  return (
-    <section
-      id="projects"
-      className="mx-auto max-w-content border-t border-line px-6 py-20"
-    >
-      <h2 className="font-display text-3xl text-ink">Projects</h2>
-
-      <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {projects.map((project) => {
-          const content = (
-            <div className="flex h-full flex-col justify-between rounded-2xl border border-line p-6 transition-colors hover:border-ink">
-              <div>
-                <div className="flex items-start justify-between gap-3">
-                  <h3 className="font-display text-lg text-ink">
-                    {project.title}
-                  </h3>
-                  <span className="whitespace-nowrap rounded-full bg-gold-light px-3 py-1 text-xs text-gold">
-                    {project.status}
-                  </span>
-                </div>
-                <p className="mt-3 text-sm leading-relaxed text-ink/80">
-                  {project.description}
-                </p>
-              </div>
-              <ul className="mt-6 flex flex-wrap gap-2">
-                {project.tags.map((tag) => (
-                  <li
-                    key={tag}
-                    className="rounded-full border border-line px-3 py-1 text-xs text-muted"
-                  >
-                    {tag}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          );
-
-          return project.href ? (
-            <Link key={project.id} href={project.href} className="focus-ring block h-full">
-              {content}
-            </Link>
-          ) : (
-            <div key={project.id}>{content}</div>
-          );
-        })}
-      </div>
-    </section>
-  );
+import Image from "next/image";
+import { getPublishedProjects } from "@/lib/projects";
+import ScrollReveal from "@/components/ScrollReveal";
+export default async function Projects(){
+ const projects=await getPublishedProjects();
+ return <section id="projects" className="mx-auto max-w-content border-t border-line px-6 py-24"><ScrollReveal><div className="flex items-end justify-between gap-6"><div><p className="text-xs font-medium uppercase tracking-[0.2em] text-pine">Selected work</p><h2 className="mt-3 font-display text-4xl text-ink sm:text-5xl">Projects</h2></div><span className="hidden text-sm text-muted sm:block">{projects.length} published</span></div></ScrollReveal>{projects.length===0?<p className="mt-10 text-sm text-muted">Projects will appear here as they are published from the admin panel.</p>:<div className="mt-12 grid gap-6 md:grid-cols-2">{projects.map((p,i)=>{const card=<article className="project-card group overflow-hidden rounded-[1.5rem] border border-line bg-white/45"><div className="relative aspect-[16/9] overflow-hidden bg-pine-light">{p.image_url?<Image src={p.image_url} alt={p.title} fill sizes="(min-width: 768px) 50vw, 100vw" className="object-cover transition-transform duration-700 group-hover:scale-[1.04]"/>:<div className="absolute inset-0 project-placeholder"><span>{String(i+1).padStart(2,"0")}</span></div>}<div className="absolute left-4 top-4 rounded-full border border-white/50 bg-ink/75 px-3 py-1.5 text-[11px] font-medium text-white backdrop-blur">{p.status}</div></div><div className="p-6 sm:p-7"><div className="flex items-start justify-between gap-5"><h3 className="font-display text-2xl text-ink">{p.title}</h3>{p.href&&<span className="project-arrow text-xl text-pine">↗</span>}</div><p className="mt-3 text-sm leading-7 text-muted">{p.description}</p><ul className="mt-6 flex flex-wrap gap-2">{p.tags.map(t=><li key={t} className="rounded-full border border-line px-3 py-1 text-xs text-muted">{t}</li>)}</ul></div></article>;return p.href?<ScrollReveal key={p.id}><Link href={p.href} className="focus-ring block">{card}</Link></ScrollReveal>:<ScrollReveal key={p.id}>{card}</ScrollReveal>})}</div>}</section>
 }
