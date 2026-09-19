@@ -64,9 +64,9 @@ export default function Testimonials(){
           card.style.top=target.top;
           card.style.transform="scale(.96) rotate("+target.rotate+")";
           window.requestAnimationFrame(()=>{
-            card.style.transition="left 1.8s cubic-bezier(.22,1,.36,1), top 1.8s cubic-bezier(.22,1,.36,1), transform 1.8s cubic-bezier(.22,1,.36,1), opacity .8s ease";
+            card.style.transition="left 20s cubic-bezier(.22,1,.36,1), top 20s cubic-bezier(.22,1,.36,1), transform 20s cubic-bezier(.22,1,.36,1), opacity 2s ease";
             card.style.opacity="1";
-            window.setTimeout(()=>{ card.style.transition=""; },1900);
+            window.setTimeout(()=>{ card.style.transition=""; },20300);
           });
         },240);
       } else {
