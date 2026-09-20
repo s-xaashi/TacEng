@@ -8,8 +8,20 @@ export default function ForgotPasswordPage() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+
+    const timer = window.setInterval(() => {
+      setCooldown((seconds) => Math.max(0, seconds - 1));
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [cooldown]);
 
   async function handleSubmit(e: React.FormEvent) {
+
     e.preventDefault();
     setError(null);
 
@@ -18,6 +30,8 @@ export default function ForgotPasswordPage() {
       setError("Please enter your admin email address.");
       return;
     }
+
+    if (cooldown > 0) return;
 
     setLoading(true);
 
@@ -31,10 +45,21 @@ export default function ForgotPasswordPage() {
       const data = await response.json().catch(() => null);
 
       if (!response.ok) {
-        setError(
-          data?.error ||
-            "Password reset is temporarily unavailable. Please try again."
-        );
+        if (response.status === 429) {
+          const retryAfter = Math.max(
+            1,
+            Math.min(3600, Number(data?.retryAfter) || 5)
+          );
+          setCooldown(retryAfter);
+          setError(
+            `Too many reset attempts. Please wait ${retryAfter} seconds before trying again.`
+          );
+        } else {
+          setError(
+            data?.error ||
+              "Password reset is temporarily unavailable. Please try again."
+          );
+        }
         return;
       }
 
@@ -91,10 +116,14 @@ export default function ForgotPasswordPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || cooldown > 0}
               className="focus-ring mt-2 rounded-full bg-ink px-6 py-3 text-sm font-medium text-paper hover:bg-ink/85 disabled:opacity-50"
             >
-              {loading ? "Checking…" : "Send Reset Link"}
+              {loading
+                ? "Checking…"
+                : cooldown > 0
+                  ? `Try again in ${cooldown}s`
+                  : "Send Reset Link"}
             </button>
           </form>
         </>
