@@ -14,7 +14,17 @@ export default function ForgotPasswordPage() {
     if (cooldown <= 0) return;
 
     const timer = window.setInterval(() => {
-      setCooldown((seconds) => Math.max(0, seconds - 1));
+      setCooldown((seconds) => {
+        const next = Math.max(0, seconds - 1);
+        if (next === 0) {
+          setError((current) =>
+            current?.startsWith("Too many reset attempts.")
+              ? null
+              : current
+          );
+        }
+        return next;
+      });
     }, 1000);
 
     return () => window.clearInterval(timer);
