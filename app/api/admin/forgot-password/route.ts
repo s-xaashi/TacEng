@@ -98,18 +98,22 @@ export async function POST(request: Request) {
   const ipKey = createHash("sha256").update("ip:" + ip).digest("hex");
   const emailKey = createHash("sha256").update("email:" + email).digest("hex");
 
-  // Two independent limits: per IP and per email. The database function
-  // uses a row lock, making the check safe against concurrent requests.
+  // Two independent progressive limits: per IP and per email.
+  // Three requests are allowed in each cycle. The first lockout is 5 seconds,
+  // then 10s, 20s, 40s, etc., capped server-side. Row locking makes this
+  // safe against concurrent requests.
   const [ipLimit, emailLimit] = await Promise.all([
-    supabase.rpc("check_admin_reset_rate_limit", {
+    supabase.rpc("consume_admin_reset_rate_limit", {
       p_key: ipKey,
-      p_window_seconds: 900,
-      p_max_requests: 10,
-    }),
-    supabase.rpc("check_admin_reset_rate_limit", {
-      p_key: emailKey,
-      p_window_seconds: 900,
       p_max_requests: 3,
+      p_base_cooldown_seconds: 5,
+      p_max_cooldown_seconds: 3600,
+    }),
+    supabase.rpc("consume_admin_reset_rate_limit", {
+      p_key: emailKey,
+      p_max_requests: 3,
+      p_base_cooldown_seconds: 5,
+      p_max_cooldown_seconds: 3600,
     }),
   ]);
 
@@ -120,10 +124,32 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!ipLimit.data || !emailLimit.data) {
-    // Do not reveal whether the email is an admin. This avoids account
-    // enumeration while still giving the browser a normal success response.
-    return genericResponse();
+  const ipBlocked = ipLimit.data && !ipLimit.data.allowed;
+  const emailBlocked = emailLimit.data && !emailLimit.data.allowed;
+
+  if (ipBlocked || emailBlocked) {
+    const retryAfter = Math.max(
+      Number(ipLimit.data?.retry_after_seconds || 0),
+      Number(emailLimit.data?.retry_after_seconds || 0),
+      1
+    );
+
+    // This does not reveal whether the email is an admin; it only tells the
+    // requester that the reset endpoint itself is temporarily throttled.
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Too many reset attempts. Please wait before trying again.",
+        retryAfter,
+      },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(retryAfter),
+          "Cache-Control": "no-store",
+        },
+      }
+    );
   }
 
   // Authorization source of truth: public.admins. The browser never gets
