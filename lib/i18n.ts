@@ -85,7 +85,7 @@ export const translations = {
     nav: { home: "Hoyga", projects: "Mashaariic", about: "Aniga igu saabsan", blog: "Maqaallo", contact: "Xiriir", marketplace: "Suuqa dukumentiyada ↗" },
     hero: {
       hey: "Salaan,",
-      im: "Waxaan ahay",
+      im: "Waxaad igu yeedhaa",
       tagline: "Developer • Farsamo-abuur • Adeegsade AI",
       intro: "Waxaan dhisaa khibrado dijitaal ah oo waxtar leh anigoo isku daraya Computer Science, horumarinta webka, AI, naqshad iyo warbaahin hal-abuur leh.",
       marketplace: "Booqo Suuqa ↗",
