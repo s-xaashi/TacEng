@@ -14,6 +14,7 @@ export default function PortfolioContentManager() {
   const [quoteSo, setQuoteSo] = useState("");
   const [authorEn, setAuthorEn] = useState(DEFAULT_AUTHOR);
   const [authorSo, setAuthorSo] = useState("");
+  const [supportEnabled, setSupportEnabled] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -21,7 +22,7 @@ export default function PortfolioContentManager() {
     const supabase = getSupabaseClient();
     if (!supabase) return;
     supabase.from("portfolio_content")
-      .select("quick_note,quote_text,quote_author,quick_note_en,quick_note_so,quote_text_en,quote_text_so,quote_author_en,quote_author_so")
+      .select("quick_note,quote_text,quote_author,quick_note_en,quick_note_so,quote_text_en,quote_text_so,quote_author_en,quote_author_so,support_enabled")
       .eq("id", true)
       .maybeSingle()
       .then(({ data }) => {
@@ -32,6 +33,7 @@ export default function PortfolioContentManager() {
         setQuoteSo(data.quote_text_so ?? "");
         setAuthorEn(data.quote_author_en ?? data.quote_author ?? DEFAULT_AUTHOR);
         setAuthorSo(data.quote_author_so ?? "");
+        setSupportEnabled(data.support_enabled ?? true);
       });
   }, []);
 
@@ -56,6 +58,7 @@ export default function PortfolioContentManager() {
       quote_author: englishAuthor,
       quote_author_en: englishAuthor,
       quote_author_so: authorSo.trim() || null,
+      support_enabled: supportEnabled,
       updated_at: new Date().toISOString(),
     });
 
@@ -67,6 +70,18 @@ export default function PortfolioContentManager() {
     <div className="mb-6">
       <h2 className="font-display text-2xl text-white">Homepage Quote & Quick Note</h2>
       <p className="mt-2 text-sm leading-6 text-white/55">Enter English and Somali versions separately. The same content item is used for both languages.</p>
+    </div>
+    <div className="mb-6 rounded-2xl border border-white/10 bg-[#240b0e] p-4">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h3 className="text-sm font-semibold text-white">Support Me button</h3>
+          <p className="mt-1 text-xs leading-5 text-white/50">Show or hide the Support Me button in the website navigation. Hiding it also removes the support entry from the mobile menu.</p>
+        </div>
+        <button type="button" role="switch" aria-checked={supportEnabled} onClick={() => setSupportEnabled(v => !v)} className={"relative h-7 w-12 shrink-0 rounded-full transition " + (supportEnabled ? "bg-[#e45560]" : "bg-white/15")} aria-label={supportEnabled ? "Hide Support Me button" : "Show Support Me button"}>
+          <span className={"absolute top-1 h-5 w-5 rounded-full bg-white shadow transition " + (supportEnabled ? "left-6" : "left-1")} />
+        </button>
+      </div>
+      <p className={"mt-3 text-xs font-medium " + (supportEnabled ? "text-[#ff8790]" : "text-white/40")}>{supportEnabled ? "Visible on the website" : "Hidden from the website"}</p>
     </div>
     <div className="grid gap-5 lg:grid-cols-2">
       <div className="space-y-5">
