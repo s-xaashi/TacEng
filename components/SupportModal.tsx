@@ -2,7 +2,9 @@
 import { useState } from "react";
 import { useLanguage } from "@/components/LanguageProvider";
 
-const wallets = [
+type WalletOption = { label: string; gateway: "waafi" | "edahab" | "pbwallet" };
+
+const wallets: WalletOption[] = [
   { label: "EVC Plus", gateway: "waafi" },
   { label: "ZAAD", gateway: "waafi" },
   { label: "SAHAL", gateway: "waafi" },
@@ -14,7 +16,7 @@ export default function SupportModal({ onClose }: { onClose: () => void }) {
   const { t } = useLanguage();
   const [method, setMethod] = useState<"hosted" | "local">("hosted");
   const [amount, setAmount] = useState("5");
-  const [wallet, setWallet] = useState(wallets[0]);
+  const [wallet, setWallet] = useState<WalletOption>(wallets[0]);
   const [account, setAccount] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
