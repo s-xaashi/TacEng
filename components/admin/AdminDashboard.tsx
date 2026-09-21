@@ -18,7 +18,6 @@ type FormState = {
   category_id: string;
   is_free: boolean;
   price: string;
-  payment_link: string;
   published: boolean;
   thumbnailFile: File | null;
   pdfFile: File | null;
@@ -34,7 +33,6 @@ const emptyForm: FormState = {
   category_id: "",
   is_free: true,
   price: "0",
-  payment_link: "",
   published: true,
   thumbnailFile: null,
   pdfFile: null,
@@ -82,7 +80,6 @@ export default function AdminDashboard() {
       category_id: doc.category_id ?? "",
       is_free: doc.is_free,
       price: String(doc.price ?? 0),
-      payment_link: doc.payment_link ?? "",
       published: doc.published,
       thumbnailFile: null,
       pdfFile: null,
@@ -186,7 +183,6 @@ export default function AdminDashboard() {
         category_id: form.category_id || null,
         is_free: form.is_free,
         price: form.is_free ? 0 : Number(form.price) || 0,
-        payment_link: form.is_free ? null : form.payment_link || null,
         published: form.published,
         thumbnail_path: thumbnailPath,
         file_path: filePath,
@@ -353,16 +349,10 @@ export default function AdminDashboard() {
               />
             </div>
             <div>
-              <label className="text-sm text-muted">Payment link</label>
-              <input
-                type="url"
-                placeholder="https://..."
-                value={form.payment_link}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, payment_link: e.target.value }))
-                }
-                className="focus-ring mt-1 w-full rounded-md border border-line bg-white/60 px-3 py-2 text-sm text-ink"
-              />
+              <p className="text-sm font-medium text-ink">Sifalo Pay</p>
+              <p className="mt-1 text-xs leading-5 text-muted">
+                Customers pay through the connected Sifalo checkout. No manual payment link is required.
+              </p>
             </div>
           </>
         )}
