@@ -51,8 +51,21 @@ export default function SupportModal({ onClose }: { onClose: () => void }) {
           </div>
           <div className="mt-6 rounded-2xl border border-white/10 bg-white/[.04] p-4">
             <p className="text-xs uppercase tracking-[.18em] text-white/40">{t.support.amount}</p>
-            <div className="mt-2 flex items-center gap-3"><span className="text-2xl text-white/40">$</span><input value={amount} onChange={e => setAmount(e.target.value.replace(/[^0-9.]/g, ""))} inputMode="decimal" className="w-full bg-transparent font-display text-3xl outline-none" /></div>
-            <div className="mt-4 flex flex-wrap gap-2">{["5","10","25","50"].map(p => <button key={p} onClick={() => setAmount(p)} className={"rounded-full border px-4 py-2 text-xs " + (amount === p ? "border-[#e45560] bg-[#c63f4c]" : "border-white/10 text-white/60")}>${p}</button>)}</div>
+            <div className="mt-2 flex items-center gap-3"><span className="text-2xl text-white/40">$</span><span className="font-display text-3xl">{Number(amount) > 0 ? Number(amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}</span></div>
+            <div className="mt-4 flex flex-wrap gap-2">{["5","10","25","50"].map(p => <button key={p} onClick={() => setAmount(p)} className={"rounded-full border px-4 py-2 text-xs " + (amount === p ? "border-[#e45560] bg-[#c63f4c]" : "border-white/10 text-white/60")}>$\{p}</button>)}</div>
+            <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/10 px-3 py-2.5">
+              <label htmlFor="support-custom-amount" className="text-xs font-medium text-white/55">{t.support.customAmount}</label>
+              <div className="flex w-28 items-center rounded-lg border border-white/10 bg-white/[.04] px-2.5 py-1.5">
+                <span className="text-sm text-white/35">$</span>
+                <input id="support-custom-amount" type="number" min="1" max="10000" step="0.01" inputMode="decimal"
+                  value={["5","10","25","50"].includes(amount) ? "" : amount}
+                  onChange={e => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
+                  placeholder={t.support.customPlaceholder}
+                  aria-label={t.support.customAmount}
+                  className="w-full bg-transparent pl-1 text-right text-sm text-white outline-none placeholder:text-white/25"
+                />
+              </div>
+            </div>
           </div>
           <div className="mt-5 grid grid-cols-2 gap-2 rounded-2xl bg-white/[.04] p-1">
             <button onClick={() => setMethod("hosted")} className={"rounded-xl px-4 py-3 text-sm font-semibold " + (method === "hosted" ? "bg-white text-[#180708]" : "text-white/55")}>{t.support.hosted}</button>
