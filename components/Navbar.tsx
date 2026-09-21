@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useLanguage } from "@/components/LanguageProvider";
+import SupportModal from "@/components/SupportModal";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
   const { locale, setLocale, t } = useLanguage();
 
   const links = [
