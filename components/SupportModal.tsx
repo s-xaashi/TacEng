@@ -42,12 +42,12 @@ export default function SupportModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-[120] flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-5" onClick={onClose}>
-      <div className="relative w-full max-w-lg overflow-hidden rounded-t-[2rem] border border-white/10 bg-[#140708] text-white shadow-2xl sm:rounded-[2rem]" onClick={e => e.stopPropagation()}>
-        <div className="absolute -right-20 -top-24 h-56 w-56 rounded-full bg-[#d94455]/20 blur-3xl" />
+      <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-y-auto rounded-t-[2rem] border border-white/10 bg-[#140708] text-white shadow-2xl overscroll-contain [scrollbar-width:thin] sm:rounded-[2rem]" onClick={e => e.stopPropagation()}>
+        <div className="absolute -right-20 -top-24 h-56 w-56 rounded-full bg-[#d94455]/20 blur-3xl pointer-events-none" />
         <div className="relative p-6 sm:p-8">
           <div className="flex items-start justify-between gap-4">
-            <div><p className="text-[10px] font-semibold uppercase tracking-[.28em] text-[#ef7783]">{t.support.eyebrow}</p><h2 className="mt-2 font-display text-3xl">{t.support.title}</h2><p className="mt-3 text-sm leading-6 text-white/60">{t.support.appreciation}</p></div>
-            <button onClick={onClose} className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/5 text-xl" aria-label={t.support.close}>×</button>
+            <div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-[.28em] text-[#ef7783]">{t.support.eyebrow}</p><h2 className="mt-2 font-display text-3xl">{t.support.title}</h2><p className="mt-3 text-sm leading-6 text-white/60">{t.support.appreciation}</p></div>
+            <button onClick={onClose} className="mt-0 grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 bg-white/5 text-lg" aria-label={t.support.close}>×</button>
           </div>
           <div className="mt-6 rounded-2xl border border-white/10 bg-white/[.04] p-4">
             <p className="text-xs uppercase tracking-[.18em] text-white/40">{t.support.amount}</p>
