@@ -177,10 +177,10 @@ export default function BuyModal({
               className="focus-ring rounded-xl border border-line p-4 text-left hover:border-ink disabled:opacity-50"
             >
               <p className="font-medium text-ink">
-                {cardLoading ? "Redirecting…" : "International Card"}
+                {cardLoading ? "Redirecting…" : "International Card / Hosted Checkout"}
               </p>
               <p className="mt-1 text-xs text-muted">
-                Visa / Mastercard / Other supported cards
+                Visa / Mastercard / other supported cards
               </p>
             </button>
           </div>
