@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
   // Docs: return_url is required, and order_id must be on its query string
   // — Sifalo appends `sid` to whatever we give it here.
   const origin = req.nextUrl.origin;
-  const returnUrl = `${origin}/marketplace/pay/return?ref=${paymentReference}`;
+  const returnUrl = `${origin}/marketplace/pay/return?ref=${encodeURIComponent(paymentReference)}&order_id=${encodeURIComponent(paymentReference)}`;
 
   try {
     const session = await startHostedCheckout({
