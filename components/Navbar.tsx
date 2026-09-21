@@ -68,6 +68,13 @@ export default function Navbar() {
             {locale === "en" ? "SO" : "EN"}
           </button>
 
+          <button
+            type="button"
+            onClick={() => setSupportOpen(true)}
+            className="focus-ring hidden rounded-full border border-[#e45560]/50 px-5 py-2.5 text-xs font-semibold text-white hover:bg-[#c63f4c]/15 md:inline-block"
+          >
+            ♥ {t.nav.support}
+          </button>
           <Link
             href="/marketplace"
             className="focus-ring hidden rounded-full bg-[#c63f4c] px-5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-red-950/30 hover:-translate-y-0.5 md:inline-block"
@@ -102,6 +109,13 @@ export default function Navbar() {
               </li>
             ))}
           </ul>
+          <button
+            type="button"
+            onClick={() => { setOpen(false); setSupportOpen(true); }}
+            className="focus-ring mt-2 block w-full rounded-full border border-[#e45560]/50 px-5 py-3 text-center text-sm font-semibold text-white"
+          >
+            ♥ {t.nav.support}
+          </button>
           <Link
             href="/marketplace"
             onClick={() => setOpen(false)}
@@ -111,6 +125,7 @@ export default function Navbar() {
           </Link>
         </div>
       )}
+      {supportOpen && <SupportModal onClose={() => setSupportOpen(false)} />}
     </header>
   );
 }
