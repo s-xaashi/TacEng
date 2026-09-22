@@ -15,7 +15,7 @@ export default function Blog(){
  const load=async()=>{const s=getSupabaseClient();if(!s)return;const [{data:secs},{data:items}]=await Promise.all([s.from("blog_sections").select("id,label,label_en,label_so,sort_order").order("sort_order"),s.from("blogs").select("id,title,title_en,title_so,excerpt,excerpt_en,excerpt_so,cover_image_path,published_at,blocks,blocks_en,blocks_so,section_id").eq("published",true).order("sort_order").order("published_at",{ascending:false})]);setSections((secs??[]) as BlogSection[]);setPosts((items??[]) as BlogPost[])};
  useEffect(()=>{load()},[]);
  useEffect(()=>{document.body.style.overflow=active?"hidden":"";const onKeyDown=(event:KeyboardEvent)=>{if(event.key==="Escape")setActive(null)};if(active)window.addEventListener("keydown",onKeyDown);return()=>{document.body.style.overflow="";window.removeEventListener("keydown",onKeyDown)}},[active]);
- const url=(path?:string|null)=>{if(!path)return null;const s=getSupabaseClient();return s?.storage.from("thumbnails").getPublicUrl(path).data.publicUrl??null};
+ const url=(path?:string|null)=>{if(!path)return null;if(path.startsWith("/")||path.startsWith("http://")||path.startsWith("https://"))return path;const s=getSupabaseClient();return s?.storage.from("thumbnails").getPublicUrl(path).data.publicUrl??null};
  const text=(b:Block)=>locale==="so"?(b.text_so??b.text_en??b.text??""):(b.text_en??b.text??"");
  const title=(p:BlogPost)=>locale==="so"?(p.title_so??p.title_en??p.title):(p.title_en??p.title);
  const excerpt=(p:BlogPost)=>locale==="so"?(p.excerpt_so??p.excerpt_en??p.excerpt):(p.excerpt_en??p.excerpt);
