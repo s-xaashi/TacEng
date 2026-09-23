@@ -5,8 +5,10 @@ import Link from "next/link";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import type { Category, MarketplaceDocument } from "@/lib/supabase/types";
 import DocumentCard from "@/components/DocumentCard";
+import { useLanguage } from "@/components/LanguageProvider";
 
 export default function MarketplacePage() {
+  const { locale, t } = useLanguage();
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [categories, setCategories] = useState<Category[]>([]);
@@ -58,9 +60,21 @@ export default function MarketplacePage() {
 
   const categoryMap = useMemo(() => {
     const map = new Map<string, string>();
-    categories.forEach((c) => map.set(c.id, c.name));
+    categories.forEach((c) => {
+      const slug = c.slug.toLowerCase();
+      const label =
+        locale === "so"
+          ? slug === "books" ? t.marketplace.category.books
+          : slug === "business" ? t.marketplace.category.business
+          : slug === "computer-science" || slug === "computer_science" ? t.marketplace.category.computerScience
+          : slug === "education" ? t.marketplace.category.education
+          : slug === "other" ? t.marketplace.category.other
+          : c.name
+          : c.name;
+      map.set(c.id, label);
+    });
     return map;
-  }, [categories]);
+  }, [categories, locale, t]);
 
   const filtered = useMemo(() => {
     return documents.filter((doc) => {
@@ -68,7 +82,7 @@ export default function MarketplacePage() {
         ? categoryMap.get(doc.category_id)
         : undefined;
       const matchesCategory =
-        activeCategory === "All" || categoryName === activeCategory;
+        activeCategory === t.marketplace.all || categoryName === activeCategory;
       const matchesQuery = doc.title
         .toLowerCase()
         .includes(query.trim().toLowerCase());
@@ -79,15 +93,15 @@ export default function MarketplacePage() {
   return (
     <main className="mx-auto min-h-screen max-w-content px-6 py-12">
       <Link href="/" className="focus-ring text-sm text-muted hover:text-ink">
-        ← Back to Portfolio
+        {t.marketplace.back}
       </Link>
 
       <div className="mt-8">
         <h1 className="font-display text-4xl text-ink">
-          Document Marketplace
+          {t.marketplace.title}
         </h1>
         <p className="mt-3 max-w-md text-base text-muted">
-          Find the documents and resources you need.
+          {t.marketplace.intro}
         </p>
       </div>
 
@@ -96,21 +110,21 @@ export default function MarketplacePage() {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search documents..."
+          placeholder={t.marketplace.search}
           className="focus-ring w-full rounded-full border border-line bg-white/60 px-5 py-3 text-sm text-ink sm:max-w-sm"
         />
 
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => setActiveCategory("All")}
+            onClick={() => setActiveCategory(t.marketplace.all)}
             className={`focus-ring rounded-full border px-4 py-2 text-xs transition-colors ${
               activeCategory === "All"
                 ? "border-ink bg-ink text-paper"
                 : "border-line text-muted hover:border-ink hover:text-ink"
             }`}
           >
-            All
+            {t.marketplace.all}
           </button>
           {categories.map((category) => (
             <button
@@ -130,7 +144,7 @@ export default function MarketplacePage() {
       </div>
 
       {loading ? (
-        <p className="mt-16 text-center text-sm text-muted">Loading…</p>
+        <p className="mt-16 text-center text-sm text-muted">{t.marketplace.loading}</p>
       ) : error ? (
         <p className="mt-16 text-center text-sm text-muted">{error}</p>
       ) : filtered.length > 0 ? (
@@ -148,8 +162,8 @@ export default function MarketplacePage() {
       ) : (
         <p className="mt-16 text-center text-sm text-muted">
           {documents.length === 0
-            ? "No documents yet — check back soon."
-            : "No documents match your search."}
+            ? t.marketplace.noDocuments
+            : t.marketplace.noMatch}
         </p>
       )}
     </main>
