@@ -89,7 +89,7 @@ export async function GET(request: Request) {
   const purchases = (purchasesResult.data ?? []).map((purchase) => ({
     id: purchase.id,
     type: "Document Purchase" as const,
-    item: purchase.documents?.title ?? purchase.document_id,
+    item: purchase.documents?.[0]?.title ?? purchase.document_id,
     customer_phone: purchase.customer_phone,
     amount: Number(purchase.amount),
     currency: purchase.currency,
