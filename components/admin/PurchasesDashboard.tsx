@@ -33,6 +33,7 @@ export default function PurchasesDashboard() {
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selectedNote, setSelectedNote] = useState<string | null>(null);
   const [filter, setFilter] =
     useState<(typeof STATUS_FILTERS)[number]>("all");
 
@@ -101,6 +102,17 @@ export default function PurchasesDashboard() {
       cancelled = true;
     };
   }, [filter]);
+
+  useEffect(() => {
+    if (!selectedNote) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSelectedNote(null);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [selectedNote]);
 
   return (
     <main className="mx-auto min-h-screen max-w-content px-6 py-12">
@@ -172,7 +184,33 @@ export default function PurchasesDashboard() {
                   <td className="py-3 pr-4 text-ink">{p.item}</td>
                   <td className="py-3 pr-4 text-ink">{p.customer_name ?? "—"}</td>
                   <td className="py-3 pr-4 text-muted">{p.customer_phone ?? "—"}</td>
-                  <td className="max-w-[240px] whitespace-normal py-3 pr-4 text-muted">{p.customer_note ?? "—"}</td>
+                  <td className="max-w-[240px] py-3 pr-4 text-muted">
+                    {p.customer_note ? (
+                      (() => {
+                        const words = p.customer_note.trim().split(/\s+/);
+                        const preview =
+                          words.length > 2
+                            ? words.slice(0, 2).join(" ") + " …"
+                            : p.customer_note;
+
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedNote(p.customer_note)}
+                            className="focus-ring max-w-[240px] text-left transition-opacity hover:opacity-70"
+                            aria-label="Open full note"
+                            title="Click to read full note"
+                          >
+                            <span className="block max-w-[240px] whitespace-normal break-words">
+                              {preview}
+                            </span>
+                          </button>
+                        );
+                      })()
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                   <td className="py-3 pr-4 text-ink">
                     {p.amount.toFixed(2)} {p.currency}
                   </td>
@@ -209,6 +247,42 @@ export default function PurchasesDashboard() {
           </table>
         </div>
       )}
+      {selectedNote ? (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 px-5 py-6"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setSelectedNote(null);
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="payment-note-title"
+            className="relative w-full max-w-sm rounded-2xl border border-line bg-paper p-6 shadow-2xl"
+          >
+            <button
+              type="button"
+              onClick={() => setSelectedNote(null)}
+              className="focus-ring absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full text-xl text-muted transition-colors hover:bg-line hover:text-ink"
+              aria-label="Close note"
+            >
+              ×
+            </button>
+
+            <p className="pr-10 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+              Payment note
+            </p>
+            <h2 id="payment-note-title" className="mt-1 font-display text-xl text-ink">
+              Customer note
+            </h2>
+            <p className="mt-5 max-h-[50vh] overflow-y-auto whitespace-pre-wrap break-words text-sm leading-6 text-ink">
+              {selectedNote}
+            </p>
+          </section>
+        </div>
+      ) : null}
+
     </main>
   );
 }
