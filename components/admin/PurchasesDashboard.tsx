@@ -42,6 +42,9 @@ export default function PurchasesDashboard() {
       return;
     }
 
+    // Keep the narrowed non-null client in a separate constant so
+    // TypeScript preserves the narrowing inside the async function.
+    const client = supabase;
     let cancelled = false;
 
     async function load() {
@@ -50,7 +53,7 @@ export default function PurchasesDashboard() {
 
       const {
         data: { session },
-      } = await supabase.auth.getSession();
+      } = await client.auth.getSession();
 
       if (!session?.access_token) {
         if (!cancelled) {
