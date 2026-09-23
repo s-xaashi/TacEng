@@ -12,13 +12,15 @@ function cleanText(value: unknown, max: number, label: string, required: boolean
     return null;
   }
   if (typeof value !== "string") throw new Error("Invalid " + label + ".");
-  const text = value.normalize("NFKC").trim().replace(/\\s+/g, " ");
+  const text = value.normalize("NFKC").trim().replace(/\s+/g, " ");
   if (required && !text) throw new Error(label + " is required.");
   if (!required && !text) return null;
   if (text.length > max) throw new Error(label + " is too long.");
-  if (/[\\u0000-\\u001F\\u007F]/.test(text)) throw new Error("Invalid characters in " + label + ".");
+  if (/[\u0000-\u001F\u007F]/.test(text)) throw new Error("Invalid characters in " + label + ".");
   if (/<[^>]*>/.test(text)) throw new Error("HTML is not allowed in " + label + ".");
-  if (/(https?:\\/\\/|www\\.|javascript:|data:)/i.test(text) || /[A-Za-z0-9_-]+\\.[A-Za-z]{2,}/.test(text)) throw new Error("Links are not allowed in " + label + ".");
+  if (/(https?:\/\/|www\.|javascript:|data:)/i.test(text) || /[A-Za-z0-9_-]+\.[A-Za-z]{2,}/.test(text)) {
+    throw new Error("Links are not allowed in " + label + ".");
+  }
   return text;
 }
 
