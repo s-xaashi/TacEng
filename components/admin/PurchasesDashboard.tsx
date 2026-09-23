@@ -7,6 +7,8 @@ type PaymentRow = {
   id: string;
   type: "Document Purchase" | "Support Me";
   item: string;
+  customer_name: string | null;
+  customer_note: string | null;
   customer_phone: string | null;
   amount: number;
   currency: string;
@@ -135,12 +137,14 @@ export default function PurchasesDashboard() {
         <p className="mt-8 text-sm text-muted">No payments yet.</p>
       ) : (
         <div className="mt-8 overflow-x-auto">
-          <table className="w-full min-w-[980px] border-collapse text-left text-sm">
+          <table className="w-full min-w-[1180px] border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-line text-xs uppercase tracking-wide text-muted">
                 <th className="py-2 pr-4">Type</th>
                 <th className="py-2 pr-4">Item</th>
+                <th className="py-2 pr-4">Name</th>
                 <th className="py-2 pr-4">Phone</th>
+                <th className="py-2 pr-4">Note</th>
                 <th className="py-2 pr-4">Amount</th>
                 <th className="py-2 pr-4">Method</th>
                 <th className="py-2 pr-4">Sifalo TXN</th>
@@ -166,9 +170,9 @@ export default function PurchasesDashboard() {
                     </span>
                   </td>
                   <td className="py-3 pr-4 text-ink">{p.item}</td>
-                  <td className="py-3 pr-4 text-muted">
-                    {p.customer_phone ?? "—"}
-                  </td>
+                  <td className="py-3 pr-4 text-ink">{p.customer_name ?? "—"}</td>
+                  <td className="py-3 pr-4 text-muted">{p.customer_phone ?? "—"}</td>
+                  <td className="max-w-[240px] whitespace-normal py-3 pr-4 text-muted">{p.customer_note ?? "—"}</td>
                   <td className="py-3 pr-4 text-ink">
                     {p.amount.toFixed(2)} {p.currency}
                   </td>
