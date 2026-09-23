@@ -51,7 +51,16 @@ export async function POST(req: NextRequest) {
       currency: "USD",
     });
 
-    return NextResponse.json({ status: updated.status, reference });
+    const message =
+      result.code === "601"
+        ? "Payment successful."
+        : result.code === "603"
+          ? "Payment is being processed. Please approve it on your phone if requested."
+          : result.code === "604"
+            ? "Payment failed. Your account balance is not enough for this payment."
+            : "Payment failed. Please check your wallet details and try again.";
+
+    return NextResponse.json({ status: updated.status, reference, message, code: result.code });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Payment could not be processed." },
