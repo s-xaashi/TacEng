@@ -5,6 +5,7 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 import { getFreeDocumentUrl, getThumbnailUrl } from "@/lib/supabase/storage";
 import type { MarketplaceDocument } from "@/lib/supabase/types";
 import BuyModal from "./marketplace/BuyModal";
+import { useLanguage } from "@/components/LanguageProvider";
 
 export default function DocumentCard({
   doc,
@@ -13,6 +14,7 @@ export default function DocumentCard({
   doc: MarketplaceDocument;
   categoryName?: string;
 }) {
+  const { t } = useLanguage();
   const thumbnailUrl = getThumbnailUrl(doc.thumbnail_path);
   const [showBuyModal, setShowBuyModal] = useState(false);
 
@@ -59,7 +61,7 @@ export default function DocumentCard({
 
       <div className="mt-6 flex items-center justify-between">
         <span className="text-sm font-medium text-ink">
-          {doc.is_free ? "Free" : `$${doc.price.toFixed(2)}`}
+          {doc.is_free ? t.marketplace.free : `${doc.price.toFixed(2)}`}
         </span>
         {doc.is_free ? (
           <button
@@ -68,7 +70,7 @@ export default function DocumentCard({
             disabled={!doc.file_path}
             className="focus-ring rounded-full bg-pine px-5 py-2 text-sm font-medium text-paper transition-colors hover:bg-pine-dark disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Download
+            {t.marketplace.download}
           </button>
         ) : (
           <button
@@ -76,7 +78,7 @@ export default function DocumentCard({
             onClick={() => setShowBuyModal(true)}
             className="focus-ring rounded-full bg-gold px-5 py-2 text-sm font-medium text-paper transition-colors hover:opacity-90"
           >
-            Buy Now
+            {t.marketplace.buyNow}
           </button>
         )}
       </div>
