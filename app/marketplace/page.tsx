@@ -8,7 +8,11 @@ import DocumentCard from "@/components/DocumentCard";
 import { useLanguage } from "@/components/LanguageProvider";
 
 export default function MarketplacePage() {
-  const { locale, t } = useLanguage();
+  const { locale, setLocale, t } = useLanguage();
+
+  function toggleLanguage() {
+    setLocale(locale === "en" ? "so" : "en");
+  }
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [categories, setCategories] = useState<Category[]>([]);
@@ -92,9 +96,20 @@ export default function MarketplacePage() {
 
   return (
     <main className="mx-auto min-h-screen max-w-content px-6 py-12">
-      <Link href="/" className="focus-ring text-sm text-muted hover:text-ink">
-        {t.marketplace.back}
-      </Link>
+      <div className="flex items-center justify-between gap-4">
+        <Link href="/" className="focus-ring text-sm text-muted hover:text-ink">
+          {t.marketplace.back}
+        </Link>
+        <button
+          type="button"
+          onClick={toggleLanguage}
+          className="focus-ring rounded-full border border-line px-4 py-2 text-[10px] font-semibold uppercase tracking-[.12em] text-muted transition-colors hover:border-ink hover:text-ink"
+          aria-label={`Switch to ${t.switchTo}`}
+          title={`Switch to ${t.switchTo}`}
+        >
+          {locale === "en" ? "SO" : "EN"}
+        </button>
+      </div>
 
       <div className="mt-8">
         <h1 className="font-display text-4xl text-ink">
