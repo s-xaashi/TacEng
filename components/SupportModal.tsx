@@ -42,7 +42,13 @@ export default function SupportModal({ onClose }: { onClose: () => void }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || t.support.paymentError);
       if (data.checkoutUrl) { window.location.href = data.checkoutUrl; return; }
-      setMessage(data.status === "paid" ? t.support.success : t.support.pending);
+      if (data.status === "paid") {
+        setMessage(t.support.success);
+      } else if (data.status === "pending") {
+        setMessage(t.support.pending);
+      } else {
+        setError(data.code === "604" ? t.support.walletInsufficient : t.support.walletFailed);
+      }
     } catch (e) { setError(e instanceof Error ? e.message : t.support.paymentError); }
     finally { setLoading(false); }
   }
