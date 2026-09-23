@@ -60,7 +60,7 @@ export async function GET(request: Request) {
   const supportQuery = admin
     .from("support_payments")
     .select(
-      "id, amount, currency, payment_method, payment_reference, customer_phone, provider_transaction_id, status, created_at, paid_at"
+      "id, amount, currency, payment_method, payment_reference, customer_name, customer_note, customer_phone, provider_transaction_id, status, created_at, paid_at"
     )
     .order("created_at", { ascending: false });
 
@@ -90,6 +90,8 @@ export async function GET(request: Request) {
     id: purchase.id,
     type: "Document Purchase" as const,
     item: purchase.documents?.[0]?.title ?? purchase.document_id,
+    customer_name: null as string | null,
+    customer_note: null as string | null,
     customer_phone: purchase.customer_phone,
     amount: Number(purchase.amount),
     currency: purchase.currency,
@@ -105,6 +107,8 @@ export async function GET(request: Request) {
     id: payment.id,
     type: "Support Me" as const,
     item: "Support Me",
+    customer_name: payment.customer_name,
+    customer_note: payment.customer_note,
     customer_phone: payment.customer_phone,
     amount: Number(payment.amount),
     currency: payment.currency,
