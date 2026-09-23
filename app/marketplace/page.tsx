@@ -10,7 +10,7 @@ import { useLanguage } from "@/components/LanguageProvider";
 export default function MarketplacePage() {
   const { locale, t } = useLanguage();
   const [query, setQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState<string>("All");
+  const [activeCategory, setActiveCategory] = useState<string>("all");
   const [categories, setCategories] = useState<Category[]>([]);
   const [documents, setDocuments] = useState<MarketplaceDocument[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,7 +82,7 @@ export default function MarketplacePage() {
         ? categoryMap.get(doc.category_id)
         : undefined;
       const matchesCategory =
-        activeCategory === t.marketplace.all || categoryName === activeCategory;
+        activeCategory === "all" || doc.category_id === activeCategory;
       const matchesQuery = doc.title
         .toLowerCase()
         .includes(query.trim().toLowerCase());
@@ -117,9 +117,9 @@ export default function MarketplacePage() {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => setActiveCategory(t.marketplace.all)}
+            onClick={() => setActiveCategory("all")}
             className={`focus-ring rounded-full border px-4 py-2 text-xs transition-colors ${
-              activeCategory === "All"
+              activeCategory === "all"
                 ? "border-ink bg-ink text-paper"
                 : "border-line text-muted hover:border-ink hover:text-ink"
             }`}
@@ -130,9 +130,9 @@ export default function MarketplacePage() {
             <button
               key={category.id}
               type="button"
-              onClick={() => setActiveCategory(category.name)}
+              onClick={() => setActiveCategory(category.id)}
               className={`focus-ring rounded-full border px-4 py-2 text-xs transition-colors ${
-                activeCategory === category.name
+                activeCategory === category.id
                   ? "border-ink bg-ink text-paper"
                   : "border-line text-muted hover:border-ink hover:text-ink"
               }`}
