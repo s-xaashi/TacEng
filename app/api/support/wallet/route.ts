@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { chargeWallet, type WalletGateway } from "@/lib/sifalo/client";
-import { createSupportPayment, generateSupportReference, applySupportVerify } from "@/lib/sifalo/support";
+import { createSupportPayment, generateSupportReference, applySupportVerify, validateSupportIdentity } from "@/lib/sifalo/support";
 const ALLOWED: WalletGateway[] = ["waafi","edahab","pbwallet"];
 export async function POST(req: NextRequest) {
   let body: {amount?:number; gateway?:string; account?:string; name?:unknown; note?:unknown};
