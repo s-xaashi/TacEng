@@ -18,6 +18,8 @@ export default function SupportModal({ onClose }: { onClose: () => void }) {
   const [amount, setAmount] = useState("5");
   const [wallet, setWallet] = useState<WalletOption>(wallets[0]);
   const [account, setAccount] = useState("");
+  const [name, setName] = useState("");
+  const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -25,12 +27,17 @@ export default function SupportModal({ onClose }: { onClose: () => void }) {
   async function pay() {
     setError(""); setMessage("");
     const value = Number(amount);
+    const cleanName = name.trim().replace(/\s+/g, " ");
+    const cleanNote = note.trim().replace(/\s+/g, " ");
     if (!Number.isFinite(value) || value < 1 || value > 10000) { setError(t.support.amountError); return; }
+    if (!cleanName) { setError(t.support.nameError); return; }
+    if (cleanName.length > 80) { setError(t.support.nameLengthError); return; }
+    if (cleanNote.length > 200) { setError(t.support.noteLengthError); return; }
     if (method === "local" && !account.trim()) { setError(t.support.accountError); return; }
     setLoading(true);
     try {
       const endpoint = method === "hosted" ? "/api/support/hosted" : "/api/support/wallet";
-      const body = method === "hosted" ? { amount: value } : { amount: value, gateway: wallet.gateway, account: account.trim() };
+      const body = { amount: value, name: cleanName, note: cleanNote || undefined, ...(method === "local" ? { gateway: wallet.gateway, account: account.trim() } : {}) };
       const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || t.support.paymentError);
@@ -65,6 +72,16 @@ export default function SupportModal({ onClose }: { onClose: () => void }) {
                   className="w-full bg-transparent pl-1 text-right text-sm text-white outline-none placeholder:text-white/25"
                 />
               </div>
+            </div>
+          </div>
+          <div className="mt-5 grid gap-4 rounded-2xl border border-white/10 bg-white/[.03] p-4">
+            <div>
+              <label htmlFor="support-name" className="text-sm text-white/55">{t.support.name}</label>
+              <input id="support-name" type="text" required maxLength={80} value={name} onChange={e => setName(e.target.value)} placeholder={t.support.namePlaceholder} autoComplete="name" className="mt-2 w-full rounded-xl border border-white/10 bg-white/[.04] px-4 py-3 text-sm outline-none" />
+            </div>
+            <div>
+              <div className="flex items-center justify-between gap-3"><label htmlFor="support-note" className="text-sm text-white/55">{t.support.note}</label><span className="text-[11px] text-white/30">{note.length}/200</span></div>
+              <textarea id="support-note" maxLength={200} rows={3} value={note} onChange={e => setNote(e.target.value)} placeholder={t.support.notePlaceholder} className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-white/[.04] px-4 py-3 text-sm outline-none" />
             </div>
           </div>
           <div className="mt-5 grid grid-cols-2 gap-2 rounded-2xl bg-white/[.04] p-1">
