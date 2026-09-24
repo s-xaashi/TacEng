@@ -53,7 +53,7 @@ export async function GET(request: Request) {
   const purchasesQuery = admin
     .from("purchases")
     .select(
-      "id, document_id, customer_phone, amount, currency, payment_method, provider_transaction_id, payment_reference, status, created_at, paid_at, documents(title), document_variants(label)"
+      "id, document_id, customer_phone, amount, currency, payment_method, provider_transaction_id, payment_reference, status, created_at, paid_at, documents(title)"
     )
     .order("created_at", { ascending: false });
 
@@ -89,11 +89,7 @@ export async function GET(request: Request) {
   const purchases = (purchasesResult.data ?? []).map((purchase) => ({
     id: purchase.id,
     type: "Document Purchase" as const,
-    item: purchase.documents?.[0]?.title
-      ? purchase.document_variants?.[0]?.label
-        ? `${purchase.documents[0].title} — ${purchase.document_variants[0].label}`
-        : purchase.documents[0].title
-      : purchase.document_id,
+    item: purchase.documents?.[0]?.title ?? purchase.document_id,
     customer_name: null as string | null,
     customer_note: null as string | null,
     customer_phone: purchase.customer_phone,
