@@ -353,9 +353,7 @@ export default function DocumentManager() {
 
       <form onSubmit={handleSubmit} className="mt-7 grid gap-5">
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Product title">
-            <input required value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} className="admin-input" />
-          </Field>
+          <div />
           <Field label="Product type">
             <select value={form.product_type} onChange={e => setForm(f => ({ ...f, product_type: e.target.value }))} className="admin-input">
               {PRODUCT_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
