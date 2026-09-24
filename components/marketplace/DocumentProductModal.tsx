@@ -73,14 +73,19 @@ export default function DocumentProductModal({
   }
 
   async function handleDownload() {
-    if (!doc.download_enabled || !doc.file_path) return;
+    if (!doc.download_enabled) return;
     if (price > 0) {
       setShowBuy(true);
       return;
     }
+
+    const filePath = selectedVariant?.file_path ?? doc.file_path;
+    const fileBucket = selectedVariant?.file_bucket ?? (doc.is_free ? "free-documents" : "paid-documents");
+    if (!filePath || fileBucket !== "free-documents") return;
+
     const client = getSupabaseClient();
     if (client) await client.rpc("increment_download_count", { doc_id: doc.id });
-    const url = getFreeDocumentUrl(doc.file_path);
+    const url = getFreeDocumentUrl(filePath);
     if (url) window.open(url, "_blank", "noopener,noreferrer");
   }
 
