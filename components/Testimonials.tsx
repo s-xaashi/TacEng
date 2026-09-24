@@ -215,18 +215,22 @@ export default function Testimonials() {
 
   return (
     <section id="testimonials" className="site-section section-divider">
-      <div className="grid gap-10 lg:grid-cols-[.75fr_1.25fr] lg:items-center">
+      <div className="mx-auto max-w-4xl">
         <div>
           <p className="hand text-xl text-[#e45560]">A little kindness 😊</p>
           <h2 className="mt-1 font-display text-5xl tracking-tight sm:text-6xl">
             Leave a note.
           </h2>
-          <p className="mt-5 max-w-md text-base leading-7 text-white/60">
+          <p className="mt-5 max-w-2xl text-base leading-7 text-white/60">
             Share your thoughts, a review, or simply leave something nice. Your
-            note appears here after I approve it.
+            note appears below after I approve it.
           </p>
 
-          <form onSubmit={submit} className="ink-card mt-8 rounded-[2rem] p-6 sm:p-7" noValidate>
+          <form
+            onSubmit={submit}
+            className="ink-card mt-8 rounded-[2rem] p-6 sm:p-7"
+            noValidate
+          >
             <label className="block text-sm text-white/70">
               Your name
               <input
@@ -298,8 +302,8 @@ export default function Testimonials() {
           </form>
         </div>
 
-        <div>
-          <div className="mb-4 flex items-end justify-between">
+        <div className="mt-14">
+          <div className="mb-4 flex items-end justify-between gap-4">
             <div>
               <p className="text-xs uppercase tracking-[.25em] text-white/35">
                 Community wall
@@ -308,7 +312,9 @@ export default function Testimonials() {
                 Kind words.
               </h3>
             </div>
-            <span className="text-xs text-white/35">Drag the notes around</span>
+            <span className="text-right text-xs text-white/35">
+              Drag the notes around
+            </span>
           </div>
 
           <div
@@ -355,7 +361,7 @@ export default function Testimonials() {
             ))}
           </div>
         </div>
-      </div>
+      </div>      </div>
     </section>
   );
 }
