@@ -82,3 +82,74 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ image: data });
 }
+
+
+export async function DELETE(request: Request) {
+  const authHeader = request.headers.get("authorization") || "";
+  const token = authHeader.startsWith("Bearer ")
+    ? authHeader.slice("Bearer ".length).trim()
+    : "";
+
+  if (!token) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+
+  const admin = getSupabaseAdmin();
+  const {
+    data: { user },
+    error: userError,
+  } = await admin.auth.getUser(token);
+
+  if (userError || !user) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+
+  const { data: adminRow } = await admin
+    .from("admins")
+    .select("user_id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!adminRow) return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+
+  const body = await request.json().catch(() => null);
+  const imageId = typeof body?.imageId === "string" ? body.imageId : "";
+
+  if (!imageId) {
+    return NextResponse.json({ error: "Invalid image ID." }, { status: 400 });
+  }
+
+  const { data: image, error: imageError } = await admin
+    .from("document_images")
+    .select("id, document_id, image_path")
+    .eq("id", imageId)
+    .maybeSingle();
+
+  if (imageError) {
+    console.error("Failed to find document image", { message: imageError.message });
+    return NextResponse.json({ error: "Could not remove product image." }, { status: 500 });
+  }
+
+  if (!image) return NextResponse.json({ error: "Image not found." }, { status: 404 });
+
+  if (!image.image_path.startsWith(`products/${image.document_id}/`)) {
+    return NextResponse.json({ error: "Invalid image path." }, { status: 400 });
+  }
+
+  const { error: storageError } = await admin.storage
+    .from("thumbnails")
+    .remove([image.image_path]);
+
+  if (storageError) {
+    console.error("Failed to remove document image file", { message: storageError.message });
+    return NextResponse.json({ error: "Could not remove product image file." }, { status: 500 });
+  }
+
+  const { error: deleteError } = await admin
+    .from("document_images")
+    .delete()
+    .eq("id", image.id);
+
+  if (deleteError) {
+    console.error("Failed to delete document image row", { message: deleteError.message });
+    return NextResponse.json({ error: "Could not remove product image." }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
+}
