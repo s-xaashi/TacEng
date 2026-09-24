@@ -10,9 +10,11 @@ import { useLanguage } from "@/components/LanguageProvider";
 export default function DocumentCard({
   doc,
   categoryName,
+  productTypeName,
 }: {
   doc: MarketplaceDocument;
   categoryName?: string;
+  productTypeName?: string;
 }) {
   const { locale, t } = useLanguage();
   const localizedTitle = locale === "so" ? (doc.title_so || doc.title_en || doc.title) : (doc.title_en || doc.title);
@@ -121,7 +123,7 @@ export default function DocumentCard({
 
           <div className="flex items-center justify-between gap-2">
             {categoryName && <span className="rounded-full border border-line px-3 py-1 text-xs text-muted">{categoryName}</span>}
-            <span className="text-[10px] uppercase tracking-wide text-muted">{doc.product_type}</span>
+            <span className="text-[10px] uppercase tracking-wide text-muted">{productTypeName ?? doc.product_type}</span>
           </div>
 
           <h3 className="mt-4 font-display text-lg text-ink">{localizedTitle}</h3>
