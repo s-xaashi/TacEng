@@ -4,6 +4,12 @@ export type Category = {
   slug: string;
 };
 
+export type ProductType = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
 export type DocumentVariant = {
   id: string;
   document_id: string;
