@@ -22,6 +22,7 @@ type WalletStatus = "pending" | "paid" | "failed";
 
 export default function BuyModal({
   documentId,
+  variantId,
   title,
   price,
   onClose,
