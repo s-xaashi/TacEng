@@ -150,20 +150,49 @@ export default function DocumentManager() {
   }
 
   async function uploadImages(client: NonNullable<ReturnType<typeof getSupabaseClient>>, files: File[], documentId: string, variantId: string | null) {
+    if (!files.length) return;
+
+    const { data: { session } } = await client.auth.getSession();
+    if (!session?.access_token) throw new Error("Your admin session has expired. Please sign in again.");
+
+    const { count } = await client
+      .from("document_images")
+      .select("id", { count: "exact", head: true })
+      .eq("document_id", documentId)
+      .is("variant_id", variantId);
+
+    const startOrder = count ?? 0;
+
     for (const [index, file] of files.entries()) {
       if (!file.type.startsWith("image/")) throw new Error("Only image files can be uploaded to the gallery.");
       if (file.size > 8 * 1024 * 1024) throw new Error("Each gallery image must be 8 MB or smaller.");
-      const path = `products/${documentId}/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-      const { error: uploadError } = await client.storage.from("thumbnails").upload(path, file, { cacheControl: "31536000", upsert: false });
+
+      const imagePath = `products/${documentId}/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      const { error: uploadError } = await client.storage
+        .from("thumbnails")
+        .upload(imagePath, file, { cacheControl: "31536000", upsert: false });
+
       if (uploadError) throw uploadError;
-      const { error: rowError } = await client.from("document_images").insert({
-        document_id: documentId,
-        variant_id: variantId,
-        image_path: path,
-        alt_text: form.title,
-        sort_order: index,
+
+      const response = await fetch("/api/admin/document-images", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          documentId,
+          variantId,
+          imagePath,
+          altText: form.title.trim().slice(0, 500),
+          sortOrder: startOrder + index,
+        }),
       });
-      if (rowError) throw rowError;
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        throw new Error(body?.error || "Could not save product image.");
+      }
     }
   }
 
