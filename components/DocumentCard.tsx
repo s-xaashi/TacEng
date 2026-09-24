@@ -14,7 +14,9 @@ export default function DocumentCard({
   doc: MarketplaceDocument;
   categoryName?: string;
 }) {
-  const { t } = useLanguage();
+  const { locale, t } = useLanguage();
+  const localizedTitle = locale === "so" ? (doc.title_so || doc.title_en || doc.title) : (doc.title_en || doc.title);
+  const localizedDescription = locale === "so" ? (doc.description_so || doc.description_en || doc.description) : (doc.description_en || doc.description);
   const [open, setOpen] = useState(false);
   const thumbnailUrl = getThumbnailUrl(doc.thumbnail_path);
   const activeVariant = doc.variants?.find(v => v.enabled);
@@ -50,8 +52,8 @@ export default function DocumentCard({
             <span className="text-[10px] uppercase tracking-wide text-muted">{doc.product_type}</span>
           </div>
 
-          <h3 className="mt-4 font-display text-lg text-ink">{doc.title}</h3>
-          {doc.description && <p className="mt-2 line-clamp-4 text-sm leading-relaxed text-ink/80">{doc.description}</p>}
+          <h3 className="mt-4 font-display text-lg text-ink">{localizedTitle}</h3>
+          {localizedDescription && <p className="mt-2 line-clamp-4 text-sm leading-relaxed text-ink/80">{localizedDescription}</p>}
 
           <div className="mt-4 flex flex-wrap gap-2 text-[11px] text-muted">
             {activeVariant && <span className="rounded-full bg-line/60 px-2.5 py-1">{activeVariant.label}</span>}
