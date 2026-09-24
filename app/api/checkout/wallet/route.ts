@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
     account?: string;
     customerEmail?: string;
     customerPhone?: string;
+    variantId?: string;
   };
   try {
     body = await req.json();
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const { documentId, gateway, account, customerEmail, customerPhone } = body;
+  const { documentId, gateway, account, customerEmail, customerPhone, variantId } = body;
 
   if (!documentId || !gateway || !account) {
     return NextResponse.json(
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Price comes from the database — never from the browser.
-  const doc = await getPurchasableDocument(documentId);
+  const doc = await getPurchasableDocument(documentId, variantId);
   if (!doc) {
     return NextResponse.json(
       { error: "This document isn't available for purchase." },
@@ -49,6 +50,7 @@ export async function POST(req: NextRequest) {
 
   const purchase = await createPendingPurchase({
     documentId: doc.id,
+    variantId: doc.variant_id,
     amount: doc.price,
     currency,
     paymentMethod: gateway,
