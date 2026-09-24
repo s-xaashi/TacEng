@@ -42,6 +42,7 @@ export default function DocumentProductModal({
   }, [doc, selectedVariant]);
 
   const price = selectedVariant ? selectedVariant.price : doc.price;
+  const selectedIsFree = price <= 0;
   const average = reviews.length ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0;
 
   useEffect(() => {
@@ -60,7 +61,7 @@ export default function DocumentProductModal({
 
   async function handleDownload() {
     if (!doc.download_enabled || !doc.file_path) return;
-    if (!doc.is_free) {
+    if (price > 0) {
       setShowBuy(true);
       return;
     }
@@ -149,7 +150,7 @@ export default function DocumentProductModal({
                   <div className="mt-2 flex flex-wrap gap-2">
                     {variants.map(v => (
                       <button key={v.id} type="button" onClick={() => setVariantId(v.id)} className={`focus-ring rounded-full border px-4 py-2 text-xs ${selectedVariant?.id === v.id ? "border-ink bg-ink text-paper" : "border-line text-muted"}`}>
-                        {v.label} {!doc.is_free && `· $${v.price.toFixed(2)}`}
+                        {v.label} {v.price > 0 ? `· ${v.price.toFixed(2)}` : `· ${t.marketplace.free}`}
                       </button>
                     ))}
                   </div>
@@ -157,10 +158,10 @@ export default function DocumentProductModal({
               )}
 
               <div className="mt-7 flex items-center justify-between gap-4 border-t border-line pt-5">
-                <div className="text-xl font-semibold text-ink">{doc.is_free ? t.marketplace.free : `$${price.toFixed(2)}`}</div>
+                <div className="text-xl font-semibold text-ink">{selectedIsFree ? t.marketplace.free : `${price.toFixed(2)}`}</div>
                 {doc.download_enabled ? (
                   <button type="button" onClick={handleDownload} className="focus-ring rounded-full bg-ink px-6 py-3 text-sm font-medium text-paper">
-                    {doc.is_free ? t.marketplace.download : t.marketplace.buyNow}
+                    {selectedIsFree ? t.marketplace.download : t.marketplace.buyNow}
                   </button>
                 ) : (
                   <span className="rounded-full border border-line px-5 py-3 text-sm text-muted">{t.marketplace.unavailable}</span>
