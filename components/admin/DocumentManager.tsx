@@ -17,7 +17,9 @@ type DraftVariant = {
 type FormState = {
   id: string | null;
   title: string;
+  title_so: string;
   description: string;
+  description_so: string;
   category_id: string;
   product_type: string;
   is_free: boolean;
@@ -37,7 +39,9 @@ type FormState = {
 const emptyForm: FormState = {
   id: null,
   title: "",
+  title_so: "",
   description: "",
+  description_so: "",
   category_id: "",
   product_type: "book",
   is_free: true,
@@ -78,7 +82,7 @@ export default function DocumentManager() {
     setLoading(true);
     const [{ data: cats }, { data: docs }, { data: images }] = await Promise.all([
       client.from("categories").select("id, name, slug").order("name"),
-      client.from("documents").select("id, title, description, category_id, file_path, thumbnail_path, price, is_free, payment_link, published, download_enabled, product_type, download_count, created_at, updated_at").order("created_at", { ascending: false }),
+      client.from("documents").select("id, title, description, title_en, description_en, title_so, description_so, category_id, file_path, thumbnail_path, price, is_free, payment_link, published, download_enabled, product_type, download_count, created_at, updated_at").order("created_at", { ascending: false }),
       client.from("document_images").select("id, document_id, variant_id, image_path, alt_text, sort_order, created_at").order("sort_order"),
     ]);
     setCategories(cats ?? []);
@@ -110,8 +114,10 @@ export default function DocumentManager() {
     const imgs = (images ?? []) as DocumentImage[];
     setForm({
       id: doc.id,
-      title: doc.title,
-      description: doc.description ?? "",
+      title: doc.title_en ?? doc.title,
+      title_so: doc.title_so ?? "",
+      description: doc.description_en ?? doc.description ?? "",
+      description_so: doc.description_so ?? "",
       category_id: doc.category_id ?? "",
       product_type: doc.product_type ?? "book",
       is_free: doc.is_free,
@@ -200,7 +206,11 @@ export default function DocumentManager() {
 
       const payload = {
         title: form.title.trim(),
+        title_en: form.title.trim(),
+        title_so: form.title_so.trim() || null,
         description: form.description.trim() || null,
+        description_en: form.description.trim() || null,
+        description_so: form.description_so.trim() || null,
         category_id: form.category_id || null,
         product_type: form.product_type,
         is_free: form.is_free,
@@ -353,9 +363,22 @@ export default function DocumentManager() {
           </Field>
         </div>
 
-        <Field label="Description">
-          <textarea rows={4} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="admin-input" />
-        </Field>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label="English title">
+            <input required value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} className="admin-input" />
+          </Field>
+          <Field label="Somali title">
+            <input value={form.title_so} onChange={e => setForm(f => ({ ...f, title_so: e.target.value }))} className="admin-input" placeholder="Cinwaanka Af-Soomaaliga" />
+          </Field>
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label="English description">
+            <textarea rows={4} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="admin-input" />
+          </Field>
+          <Field label="Somali description">
+            <textarea rows={4} value={form.description_so} onChange={e => setForm(f => ({ ...f, description_so: e.target.value }))} className="admin-input" placeholder="Sharaxaadda Af-Soomaaliga" />
+          </Field>
+        </div>
 
         <div className="grid gap-5 sm:grid-cols-3">
           <Field label="Category">
