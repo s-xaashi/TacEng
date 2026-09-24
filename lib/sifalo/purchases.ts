@@ -33,8 +33,7 @@ export async function getPurchasableDocument(documentId: string, variantId?: str
     .eq("id", documentId)
     .maybeSingle();
 
-  if (error || !data) return null;
-  if (!data.published || data.is_free) return null;
+  if (error || !data || !data.published) return null;
 
   if (variantId) {
     const { data: variant, error: variantError } = await supabase
@@ -45,8 +44,16 @@ export async function getPurchasableDocument(documentId: string, variantId?: str
       .maybeSingle();
 
     if (variantError || !variant || !variant.enabled) return null;
-    return { ...data, price: Number(variant.price), variant_id: variant.id, variant_label: variant.label };
+
+    const price = Number(variant.price);
+    // A free parent document can still contain paid levels. A zero-price
+    // level is free and should never create a purchase.
+    if (price <= 0) return null;
+
+    return { ...data, price, variant_id: variant.id, variant_label: variant.label };
   }
+
+  if (data.is_free) return null;
 
   return { ...data, variant_id: null, variant_label: null };
 }
