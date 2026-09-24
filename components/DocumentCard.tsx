@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { getFreeDocumentUrl, getThumbnailUrl } from "@/lib/supabase/storage";
 import type { MarketplaceDocument } from "@/lib/supabase/types";
@@ -18,7 +18,36 @@ export default function DocumentCard({
   const localizedTitle = locale === "so" ? (doc.title_so || doc.title_en || doc.title) : (doc.title_en || doc.title);
   const localizedDescription = locale === "so" ? (doc.description_so || doc.description_en || doc.description) : (doc.description_en || doc.description);
   const [open, setOpen] = useState(false);
-  const thumbnailUrl = getThumbnailUrl(doc.thumbnail_path);
+  const [activeImage, setActiveImage] = useState(0);
+
+  const galleryImages = useMemo(() => {
+    const paths = [
+      doc.thumbnail_path,
+      ...(doc.images ?? [])
+        .filter(image => !image.variant_id)
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map(image => image.image_path),
+    ].filter(Boolean) as string[];
+
+    return Array.from(new Set(paths));
+  }, [doc]);
+
+  useEffect(() => {
+    setActiveImage(0);
+  }, [doc.id]);
+
+  useEffect(() => {
+    if (galleryImages.length <= 1) return;
+    const timer = window.setInterval(() => {
+      setActiveImage(current => (current + 1) % galleryImages.length);
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [galleryImages.length]);
+
+  function changeImage(next: number) {
+    if (!galleryImages.length) return;
+    setActiveImage((next + galleryImages.length) % galleryImages.length);
+  }
   const activeVariant = doc.variants?.find(v => v.enabled);
   const activePrice = activeVariant ? activeVariant.price : doc.price;
   const activeIsFree = activePrice <= 0;
@@ -42,9 +71,50 @@ export default function DocumentCard({
         className="group flex h-full cursor-pointer flex-col justify-between rounded-2xl border border-line p-6 transition-transform duration-300 hover:-translate-y-1 hover:border-ink/30"
       >
         <div>
-          {thumbnailUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={thumbnailUrl} alt="" className="mb-4 aspect-[4/3] w-full rounded-lg object-cover transition-transform duration-300 group-hover:scale-[1.01]" />
+          {galleryImages.length > 0 ? (
+            <div
+              className="group/image relative mb-4 overflow-hidden rounded-lg border border-line bg-black/5"
+              onClick={event => event.stopPropagation()}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={getThumbnailUrl(galleryImages[activeImage]) ?? ""}
+                alt={localizedTitle}
+                className="aspect-[4/3] w-full object-cover transition-opacity duration-500"
+              />
+
+              {galleryImages.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    aria-label="Previous product image"
+                    onClick={() => changeImage(activeImage - 1)}
+                    className="focus-ring absolute left-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-lg text-white opacity-90 backdrop-blur-sm transition-opacity hover:bg-black/60"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Next product image"
+                    onClick={() => changeImage(activeImage + 1)}
+                    className="focus-ring absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-lg text-white opacity-90 backdrop-blur-sm transition-opacity hover:bg-black/60"
+                  >
+                    ›
+                  </button>
+                  <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1.5 rounded-full bg-black/35 px-2 py-1 backdrop-blur-sm">
+                    {galleryImages.map((_, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        aria-label={`Show product image ${index + 1}`}
+                        onClick={() => changeImage(index)}
+                        className={`h-1.5 rounded-full transition-all ${index === activeImage ? "w-4 bg-white" : "w-1.5 bg-white/60"}`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           ) : (
             <div className="mb-4 aspect-[4/3] rounded-lg border border-line bg-line/30" />
           )}
