@@ -32,12 +32,16 @@ export async function POST(req: NextRequest) {
   const supabase = getSupabaseAdmin();
   const { data: doc, error: docErr } = await supabase
     .from("documents")
-    .select("id, file_path, download_count")
+    .select("id, file_path, download_count, download_enabled")
     .eq("id", purchase.document_id)
     .maybeSingle();
 
   if (docErr || !doc || !doc.file_path) {
     return NextResponse.json({ error: "Document file not found." }, { status: 404 });
+  }
+
+  if (doc.download_enabled === false) {
+    return NextResponse.json({ error: "Downloads are currently unavailable for this document." }, { status: 403 });
   }
 
   const { data: signed, error: signErr } = await supabase.storage
