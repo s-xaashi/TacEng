@@ -20,10 +20,12 @@ export default function DocumentCard({
   const [open, setOpen] = useState(false);
   const thumbnailUrl = getThumbnailUrl(doc.thumbnail_path);
   const activeVariant = doc.variants?.find(v => v.enabled);
+  const activePrice = activeVariant ? activeVariant.price : doc.price;
+  const activeIsFree = activePrice <= 0;
 
   async function handleQuickDownload(event: React.MouseEvent) {
     event.stopPropagation();
-    if (!doc.is_free || !doc.download_enabled || !doc.file_path) return;
+    if (!activeIsFree || !doc.download_enabled || !doc.file_path) return;
     const client = getSupabaseClient();
     if (client) await client.rpc("increment_download_count", { doc_id: doc.id });
     const url = getFreeDocumentUrl(doc.file_path);
@@ -74,7 +76,7 @@ export default function DocumentCard({
 
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-paper/70 px-2.5 py-1 text-ink">
                   <span aria-hidden="true">↓</span>
-                  <span className="font-medium">{doc.download_count}</span>
+                  <span className="font-medium">{Math.max(0, Number(doc.download_count ?? 0) + Number(doc.download_count_adjustment ?? 0))}</span>
                   <span className="text-ink/70">{t.marketplace.downloads}</span>
                 </span>
 
@@ -103,9 +105,9 @@ export default function DocumentCard({
 
         <div className="mt-6 flex items-center justify-between gap-3">
           <span className="text-sm font-medium text-ink">
-            {doc.is_free ? t.marketplace.free : `$${(activeVariant?.price ?? doc.price).toFixed(2)}`}
+            {activeIsFree ? t.marketplace.free : `${activePrice.toFixed(2)}`}
           </span>
-          {doc.is_free && doc.download_enabled ? (
+          {activeIsFree && doc.download_enabled ? (
             <button type="button" onClick={handleQuickDownload} disabled={!doc.file_path} className="focus-ring rounded-full bg-pine px-5 py-2 text-sm font-medium text-paper disabled:cursor-not-allowed disabled:opacity-50">
               {t.marketplace.download}
             </button>
