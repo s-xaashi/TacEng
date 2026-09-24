@@ -138,9 +138,9 @@ export default function DocumentProductModal({
               {localizedDescription && <p className="mt-4 text-sm leading-6 text-muted">{localizedDescription}</p>}
 
               <div className="mt-5 flex flex-wrap gap-2 text-xs text-muted">
-                <span className="rounded-full bg-line/60 px-3 py-1">{doc.download_count} {t.marketplace.downloads}</span>
-                <span className="rounded-full bg-line/60 px-3 py-1">{reviews.length} {t.marketplace.reviews}</span>
-                {reviews.length > 0 && <span className="rounded-full bg-line/60 px-3 py-1">★ {average.toFixed(1)}/5</span>}
+                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 font-medium text-white/90">{doc.download_count} {t.marketplace.downloads}</span>
+                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 font-medium text-white/90">{reviews.length} {t.marketplace.reviews}</span>
+                {reviews.length > 0 && <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 font-medium text-white/90">★ {average.toFixed(1)}/5</span>}
               </div>
 
               {variants.length > 0 && (
@@ -188,12 +188,21 @@ export default function DocumentProductModal({
             <form onSubmit={submitReview} className="mt-6 rounded-2xl border border-line p-4">
               <h4 className="text-sm font-medium text-ink">{t.marketplace.writeReview}</h4>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <input maxLength={80} value={name} onChange={e => setName(e.target.value)} placeholder={t.marketplace.reviewNamePlaceholder} className="admin-input" />
-                <select value={rating} onChange={e => setRating(Number(e.target.value))} className="admin-input">
-                  {[5,4,3,2,1].map(n => <option key={n} value={n}>{"★".repeat(n)} · {t.marketplace.rating}</option>)}
-                </select>
+                <label className="block">
+                  <span className="sr-only">{t.marketplace.reviewNamePlaceholder}</span>
+                  <input maxLength={80} value={name} onChange={e => setName(e.target.value)} placeholder={t.marketplace.reviewNamePlaceholder} className="admin-input" />
+                </label>
+                <label className="block">
+                  <span className="sr-only">{t.marketplace.rating}</span>
+                  <select value={rating} onChange={e => setRating(Number(e.target.value))} className="admin-input">
+                    {[5,4,3,2,1].map(n => <option key={n} value={n}>{"★".repeat(n)} · {t.marketplace.rating}</option>)}
+                  </select>
+                </label>
               </div>
-              <textarea maxLength={500} rows={3} value={comment} onChange={e => setComment(e.target.value)} placeholder={t.marketplace.reviewCommentPlaceholder} className="admin-input mt-3" />
+              <label className="mt-3 block">
+                <span className="sr-only">{t.marketplace.reviewCommentPlaceholder}</span>
+                <textarea maxLength={500} rows={3} value={comment} onChange={e => setComment(e.target.value)} placeholder={t.marketplace.reviewCommentPlaceholder} className="admin-input" />
+              </label>
               <div className="mt-3 flex items-center justify-between gap-3">
                 <span className="text-xs text-muted">{comment.length}/500</span>
                 <button disabled={submitting} type="submit" className="focus-ring rounded-full bg-ink px-5 py-2 text-xs text-paper disabled:opacity-50">{submitting ? "…" : t.marketplace.submitReview}</button>
@@ -206,7 +215,20 @@ export default function DocumentProductModal({
 
       {showBuy && <BuyModal documentId={doc.id} variantId={selectedVariant?.id ?? null} title={localizedTitle + (selectedVariant ? ` — ${selectedVariant.label}` : "")} price={price} onClose={() => setShowBuy(false)} />}
       <style jsx>{`
-        .admin-input { width: 100%; border: 1px solid var(--line); border-radius: .65rem; background: rgba(255,255,255,.6); padding: .65rem .75rem; font-size: .875rem; color: var(--ink); }
+        .admin-input {
+          width: 100%;
+          border: 1px solid rgba(255,245,233,.18);
+          border-radius: .65rem;
+          background: #240b0e;
+          padding: .65rem .75rem;
+          font-size: .875rem;
+          color: var(--cream);
+          caret-color: var(--cream);
+          outline: none;
+        }
+        .admin-input::placeholder { color: rgba(255,245,233,.48); }
+        .admin-input:focus { border-color: var(--red-bright); box-shadow: 0 0 0 2px rgba(228,85,96,.12); }
+        select.admin-input option { background: #240b0e; color: var(--cream); }
       `}</style>
     </>
   );
