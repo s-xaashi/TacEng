@@ -139,7 +139,7 @@ export default function DocumentProductModal({
               {localizedDescription && <p className="mt-4 text-sm leading-6 text-muted">{localizedDescription}</p>}
 
               <div className="mt-5 flex flex-wrap gap-2 text-xs text-muted">
-                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 font-medium text-white/90">{doc.download_count} {t.marketplace.downloads}</span>
+                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 font-medium text-white/90">{Math.max(0, Number(doc.download_count ?? 0) + Number(doc.download_count_adjustment ?? 0))} {t.marketplace.downloads}</span>
                 <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 font-medium text-white/90">{reviews.length} {t.marketplace.reviews}</span>
                 {reviews.length > 0 && <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 font-medium text-white/90">★ {average.toFixed(1)}/5</span>}
               </div>
