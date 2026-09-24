@@ -202,7 +202,7 @@ export default function DocumentProductModal({
         </section>
       </div>
 
-      {showBuy && <BuyModal documentId={doc.id} title={doc.title + (selectedVariant ? ` — ${selectedVariant.label}` : "")} price={price} onClose={() => setShowBuy(false)} />}
+      {showBuy && <BuyModal documentId={doc.id} variantId={selectedVariant?.id ?? null} title={doc.title + (selectedVariant ? ` — ${selectedVariant.label}` : "")} price={price} onClose={() => setShowBuy(false)} />}
       <style jsx>{`
         .admin-input { width: 100%; border: 1px solid var(--line); border-radius: .65rem; background: rgba(255,255,255,.6); padding: .65rem .75rem; font-size: .875rem; color: var(--ink); }
       `}</style>
