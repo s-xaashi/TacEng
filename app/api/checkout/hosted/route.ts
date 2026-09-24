@@ -7,7 +7,7 @@ import {
 } from "@/lib/sifalo/purchases";
 
 export async function POST(req: NextRequest) {
-  let body: { documentId?: string; customerEmail?: string };
+  let body: { documentId?: string; variantId?: string; customerEmail?: string };
   try {
     body = await req.json();
   } catch {
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "documentId is required." }, { status: 400 });
   }
 
-  const doc = await getPurchasableDocument(body.documentId);
+  const doc = await getPurchasableDocument(body.documentId, body.variantId);
   if (!doc) {
     return NextResponse.json(
       { error: "This document isn't available for purchase." },
@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
   const paymentReference = generatePaymentReference();
   await createPendingPurchase({
     documentId: doc.id,
+    variantId: doc.variant_id,
     amount: doc.price,
     currency: "USD",
     paymentMethod: "checkout",
