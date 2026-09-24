@@ -17,6 +17,8 @@ export type DocumentVariant = {
   price: number;
   enabled: boolean;
   sort_order: number;
+  file_path: string | null;
+  file_bucket: "free-documents" | "paid-documents";
   created_at?: string;
   updated_at?: string;
 };
