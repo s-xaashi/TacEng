@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { getSupabaseClient } from "@/lib/supabase/client";
-import type { Category, MarketplaceDocument } from "@/lib/supabase/types";
+import type { Category, MarketplaceDocument, ProductType } from "@/lib/supabase/types";
 import DocumentCard from "@/components/DocumentCard";
 import { useLanguage } from "@/components/LanguageProvider";
 
@@ -16,6 +16,7 @@ export default function MarketplacePage() {
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [categories, setCategories] = useState<Category[]>([]);
+  const [productTypes, setProductTypes] = useState<ProductType[]>([]);
   const [documents, setDocuments] = useState<MarketplaceDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +37,7 @@ export default function MarketplacePage() {
       const [
         { data: cats, error: catErr },
         { data: docs, error: docErr },
+        { data: types, error: typeErr },
         { data: variants, error: variantErr },
         { data: images, error: imageErr },
         { data: reviews, error: reviewErr },
@@ -46,6 +48,7 @@ export default function MarketplacePage() {
           .select("id, title, description, title_en, description_en, title_so, description_so, category_id, file_path, thumbnail_path, price, is_free, payment_link, published, download_enabled, product_type, download_count, download_count_adjustment, created_at, updated_at")
           .eq("published", true)
           .order("created_at", { ascending: false }),
+        supabase!.from("product_types").select("id, name, slug").order("name"),
         supabase!.from("document_variants").select("*").eq("enabled", true).order("sort_order"),
         supabase!.from("document_images").select("*").order("sort_order"),
         supabase!.from("document_reviews").select("*").eq("approved", true).order("created_at", { ascending: false }),
@@ -53,10 +56,11 @@ export default function MarketplacePage() {
 
       if (cancelled) return;
 
-      if (catErr || docErr || variantErr || imageErr || reviewErr) {
-        setError((catErr ?? docErr ?? variantErr ?? imageErr ?? reviewErr)?.message ?? "Failed to load marketplace.");
+      if (catErr || docErr || typeErr || variantErr || imageErr || reviewErr) {
+        setError((catErr ?? docErr ?? typeErr ?? variantErr ?? imageErr ?? reviewErr)?.message ?? "Failed to load marketplace.");
       } else {
         setCategories(cats ?? []);
+        setProductTypes(types ?? []);
         const variantRows = variants ?? [];
         const imageRows = images ?? [];
         const reviewRows = reviews ?? [];
@@ -96,20 +100,46 @@ export default function MarketplacePage() {
     return map;
   }, [categories, locale, t]);
 
+  const productTypeMap = useMemo(() => {
+    const map = new Map<string, string>();
+    productTypes.forEach(type => map.set(type.slug, type.name));
+    return map;
+  }, [productTypes]);
+
   const filtered = useMemo(() => {
+    const tokens = query
+      .trim()
+      .toLocaleLowerCase()
+      .split(/\s+/)
+      .filter(Boolean);
+
     return documents.filter((doc) => {
-      const categoryName = doc.category_id
-        ? categoryMap.get(doc.category_id)
-        : undefined;
+      const categoryName = doc.category_id ? categoryMap.get(doc.category_id) : undefined;
+      const typeName = productTypeMap.get(doc.product_type) ?? doc.product_type;
       const matchesCategory =
         activeCategory === "all" || doc.category_id === activeCategory;
-      const localizedTitle = locale === "so" ? (doc.title_so || doc.title_en || doc.title) : (doc.title_en || doc.title);
-      const matchesQuery = localizedTitle
-        .toLowerCase()
-        .includes(query.trim().toLowerCase());
+
+      const searchableText = [
+        doc.title,
+        doc.title_en,
+        doc.title_so,
+        doc.description,
+        doc.description_en,
+        doc.description_so,
+        doc.product_type,
+        typeName,
+        categoryName,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLocaleLowerCase();
+
+      const matchesQuery =
+        tokens.length === 0 || tokens.every(token => searchableText.includes(token));
+
       return matchesCategory && matchesQuery;
     });
-  }, [documents, query, activeCategory, categoryMap]);
+  }, [documents, query, activeCategory, categoryMap, productTypeMap]);
 
   return (
     <main className="mx-auto min-h-screen max-w-content px-6 py-12">
@@ -188,6 +218,7 @@ export default function MarketplacePage() {
               categoryName={
                 doc.category_id ? categoryMap.get(doc.category_id) : undefined
               }
+              productTypeName={productTypeMap.get(doc.product_type) ?? doc.product_type}
             />
           ))}
         </div>
