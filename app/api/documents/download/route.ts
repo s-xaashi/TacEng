@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     .eq("id", purchase.document_id)
     .maybeSingle();
 
-  if (docErr || !doc || !doc.file_path) {
+  if (docErr || !doc) {
     return NextResponse.json({ error: "Document file not found." }, { status: 404 });
   }
 
@@ -44,9 +44,36 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Downloads are currently unavailable for this document." }, { status: 403 });
   }
 
+  let filePath = doc.file_path;
+  let fileBucket = "paid-documents";
+
+  if (purchase.variant_id) {
+    const { data: variant, error: variantErr } = await supabase
+      .from("document_variants")
+      .select("id, document_id, price, enabled, file_path, file_bucket")
+      .eq("id", purchase.variant_id)
+      .eq("document_id", purchase.document_id)
+      .maybeSingle();
+
+    if (variantErr || !variant || !variant.enabled || Number(variant.price) <= 0) {
+      return NextResponse.json({ error: "The selected level is no longer available." }, { status: 403 });
+    }
+
+    if (!variant.file_path || variant.file_bucket !== "paid-documents") {
+      return NextResponse.json({ error: "The selected level file is not available." }, { status: 404 });
+    }
+
+    filePath = variant.file_path;
+    fileBucket = variant.file_bucket;
+  }
+
+  if (!filePath) {
+    return NextResponse.json({ error: "Document file not found." }, { status: 404 });
+  }
+
   const { data: signed, error: signErr } = await supabase.storage
-    .from("paid-documents")
-    .createSignedUrl(doc.file_path, SIGNED_URL_TTL_SECONDS);
+    .from(fileBucket)
+    .createSignedUrl(filePath, SIGNED_URL_TTL_SECONDS);
 
   if (signErr || !signed) {
     return NextResponse.json(
