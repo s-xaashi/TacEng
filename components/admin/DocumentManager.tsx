@@ -27,7 +27,7 @@ type FormState = {
   download_enabled: boolean;
   published: boolean;
   thumbnailFile: File | null;
-  pdfFile: File | null;
+  productFile: File | null;
   galleryFiles: File[];
   existingThumbnailPath: string | null;
   existingFilePath: string | null;
@@ -49,7 +49,7 @@ const emptyForm: FormState = {
   download_enabled: true,
   published: true,
   thumbnailFile: null,
-  pdfFile: null,
+  productFile: null,
   galleryFiles: [],
   existingThumbnailPath: null,
   existingFilePath: null,
@@ -125,7 +125,7 @@ export default function DocumentManager() {
       download_enabled: doc.download_enabled !== false,
       published: doc.published,
       thumbnailFile: null,
-      pdfFile: null,
+      productFile: null,
       galleryFiles: [],
       existingThumbnailPath: doc.thumbnail_path,
       existingFilePath: doc.file_path,
@@ -205,7 +205,7 @@ export default function DocumentManager() {
     if (issue) { setError(issue); return; }
 
     const editing = Boolean(form.id);
-    if (editing && form.existingIsFree !== null && form.existingIsFree !== form.is_free && !form.pdfFile) {
+    if (editing && form.existingIsFree !== null && form.existingIsFree !== form.is_free && !form.productFile) {
       setError("You changed Free/Paid status — please re-upload the PDF so it moves to the correct storage bucket.");
       return;
     }
@@ -224,11 +224,22 @@ export default function DocumentManager() {
       }
 
       let filePath = form.existingFilePath;
-      if (form.pdfFile) {
-        if (form.pdfFile.type !== "application/pdf") throw new Error("Please select a PDF file.");
+      if (form.productFile) {
+        const MAX_PRODUCT_FILE_SIZE = 50 * 1024 * 1024;
+        if (form.productFile.size > MAX_PRODUCT_FILE_SIZE) {
+          throw new Error("Product files must be 50 MB or smaller.");
+        }
+
         const bucket = form.is_free ? "free-documents" : "paid-documents";
-        const path = `products/${crypto.randomUUID()}-${form.pdfFile.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-        const { error: uploadError } = await client.storage.from(bucket).upload(path, form.pdfFile, { upsert: false });
+        const path = `products/${crypto.randomUUID()}-${form.productFile.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+        const { error: uploadError } = await client.storage
+          .from(bucket)
+          .upload(path, form.productFile, {
+            upsert: false,
+            contentType: form.productFile.type || "application/octet-stream",
+            cacheControl: "31536000",
+          });
+
         if (uploadError) throw uploadError;
         filePath = path;
       }
@@ -545,8 +556,21 @@ export default function DocumentManager() {
           <Field label={`Cover / thumbnail ${form.existingThumbnailPath ? "(leave blank to keep current)" : ""}`}>
             <input type="file" accept="image/*" onChange={e => setForm(f => ({ ...f, thumbnailFile: e.target.files?.[0] ?? null }))} className="w-full text-sm text-ink" />
           </Field>
-          <Field label={`PDF file ${form.existingFilePath ? "(leave blank to keep current)" : ""}`}>
-            <input type="file" accept="application/pdf" onChange={e => setForm(f => ({ ...f, pdfFile: e.target.files?.[0] ?? null }))} className="w-full text-sm text-ink" />
+          <Field label={`Product file ${form.existingFilePath ? "(leave blank to keep current)" : ""}`}>
+            <input
+              type="file"
+              accept="*/*"
+              onChange={e => setForm(f => ({ ...f, productFile: e.target.files?.[0] ?? null }))}
+              className="w-full text-sm text-ink"
+            />
+            <p className="mt-2 text-xs leading-5 text-muted">
+              Upload any shareable file up to 50 MB — PDF, Word (.doc/.docx), Excel, Google Sheets exported as .xlsx/.csv, PowerPoint, audio/voice (.mp3/.m4a/.wav), ZIP, images, and more.
+            </p>
+            {form.productFile && (
+              <p className="mt-1 text-xs text-ink">
+                Selected: <strong>{form.productFile.name}</strong>
+              </p>
+            )}
           </Field>
         </div>
 
