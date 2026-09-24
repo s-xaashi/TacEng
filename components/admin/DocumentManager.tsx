@@ -82,7 +82,7 @@ export default function DocumentManager() {
     setLoading(true);
     const [{ data: cats }, { data: docs }, { data: images }] = await Promise.all([
       client.from("categories").select("id, name, slug").order("name"),
-      client.from("documents").select("id, title, description, title_en, description_en, title_so, description_so, category_id, file_path, thumbnail_path, price, is_free, payment_link, published, download_enabled, product_type, download_count, created_at, updated_at").order("created_at", { ascending: false }),
+      client.from("documents").select("id, title, description, title_en, description_en, title_so, description_so, category_id, file_path, thumbnail_path, price, is_free, payment_link, published, download_enabled, product_type, download_count, download_count_adjustment, created_at, updated_at").order("created_at", { ascending: false }),
       client.from("document_images").select("id, document_id, variant_id, image_path, alt_text, sort_order, created_at").order("sort_order"),
     ]);
     setCategories(cats ?? []);
@@ -254,7 +254,7 @@ export default function DocumentManager() {
         const variantPayload = {
           document_id: documentId,
           label: draft.label.trim(),
-          price: form.is_free ? 0 : Math.max(0, Number(draft.price) || 0),
+          price: Math.max(0, Number(draft.price) || 0),
           enabled: draft.enabled,
           sort_order: index,
         };
@@ -302,6 +302,38 @@ export default function DocumentManager() {
       }));
       await load();
     }
+  }
+
+  function effectiveDownloadCount(doc: MarketplaceDocument) {
+    return Math.max(0, Number(doc.download_count ?? 0) + Number(doc.download_count_adjustment ?? 0));
+  }
+
+  async function adjustDownloadCount(doc: MarketplaceDocument, delta: number) {
+    const client = getSupabaseClient();
+    if (!client) return;
+    const issue = await requireAdmin(client);
+    if (issue) { setError(issue); return; }
+    const actual = Number(doc.download_count ?? 0);
+    const adjustment = Number(doc.download_count_adjustment ?? 0);
+    const currentDisplayed = Math.max(0, actual + adjustment);
+    if (delta < 0 && currentDisplayed <= 0) return;
+    const { error: updateError } = await client.from("documents").update({
+      download_count_adjustment: adjustment + delta,
+    }).eq("id", doc.id);
+    if (updateError) setError(updateError.message);
+    else await load();
+  }
+
+  async function resetDownloadCount(doc: MarketplaceDocument) {
+    const client = getSupabaseClient();
+    if (!client) return;
+    const issue = await requireAdmin(client);
+    if (issue) { setError(issue); return; }
+    const { error: updateError } = await client.from("documents").update({
+      download_count_adjustment: 0,
+    }).eq("id", doc.id);
+    if (updateError) setError(updateError.message);
+    else await load();
   }
 
   async function deleteDocument(doc: MarketplaceDocument) {
@@ -423,7 +455,7 @@ export default function DocumentManager() {
                 <div key={v.id ?? `new-${index}`} className="rounded-xl border border-line/70 p-4">
                   <div className="grid gap-3 sm:grid-cols-[1fr_150px_auto]">
                     <input placeholder="A1 / A2 / Full bundle" value={v.label} onChange={e => updateVariant(index, { label: e.target.value })} className="admin-input" />
-                    <input type="number" min="0" step="0.01" disabled={form.is_free} value={v.price} onChange={e => updateVariant(index, { price: e.target.value })} className="admin-input disabled:opacity-50" />
+                    <input type="number" min="0" step="0.01" value={v.price} onChange={e => updateVariant(index, { price: e.target.value })} className="admin-input disabled:opacity-50" />
                     <button type="button" onClick={() => removeVariant(index)} className="focus-ring rounded-lg border border-red-200 px-3 py-2 text-xs text-red-700">Remove</button>
                   </div>
                   <label className="mt-3 flex items-center gap-2 text-xs text-muted"><input type="checkbox" checked={v.enabled} onChange={e => updateVariant(index, { enabled: e.target.checked })} /> Show this option</label>
@@ -478,15 +510,22 @@ export default function DocumentManager() {
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
                       <h4 className="font-medium text-ink">{doc.title}</h4>
-                      <p className="mt-1 text-xs text-muted">{doc.product_type} · {doc.is_free ? "Free" : `$${doc.price.toFixed(2)}`} · {docVariants.length} gallery image{docVariants.length === 1 ? "" : "s"} · {doc.download_count} downloads</p>
+                      <p className="mt-1 text-xs text-muted">{doc.product_type} · {doc.is_free ? "Free" : `${doc.price.toFixed(2)}`} · {docVariants.length} gallery image{docVariants.length === 1 ? "" : "s"} · {effectiveDownloadCount(doc)} downloads</p>
                     </div>
                     <span className={`shrink-0 rounded-full px-3 py-1 text-[10px] ${doc.published ? "bg-pine-light text-pine-dark" : "bg-line text-muted"}`}>{doc.published ? "Published" : "Hidden"}</span>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button type="button" onClick={() => startEdit(doc)} className="focus-ring rounded-full border border-line px-4 py-2 text-xs">Edit</button>
                     <button type="button" onClick={() => togglePublished(doc)} className="focus-ring rounded-full border border-line px-4 py-2 text-xs">{doc.published ? "Hide" : "Publish"}</button>
+                    <button type="button" onClick={() => adjustDownloadCount(doc, -1)} disabled={effectiveDownloadCount(doc) <= 0} className="focus-ring rounded-full border border-line px-3 py-2 text-xs disabled:opacity-40">− Download</button>
+                    <button type="button" onClick={() => adjustDownloadCount(doc, 1)} className="focus-ring rounded-full border border-line px-3 py-2 text-xs">+ Download</button>
+                    <button type="button" onClick={() => resetDownloadCount(doc)} disabled={!doc.download_count_adjustment} className="focus-ring rounded-full border border-line px-3 py-2 text-xs disabled:opacity-40">Reset to actual</button>
                     <button type="button" onClick={() => deleteDocument(doc)} className="focus-ring rounded-full border border-red-200 px-4 py-2 text-xs text-red-700">Delete</button>
                   </div>
+                  <p className="mt-2 text-[11px] text-muted">
+                    Actual downloads: {doc.download_count} · Displayed: {effectiveDownloadCount(doc)}
+                    {doc.download_count_adjustment ? ` · Manual adjustment: ${doc.download_count_adjustment > 0 ? "+" : ""}${doc.download_count_adjustment}` : ""}
+                  </p>
                 </div>
               );
             })}
