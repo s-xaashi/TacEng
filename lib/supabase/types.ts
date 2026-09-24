@@ -54,6 +54,7 @@ export type MarketplaceDocument = {
   download_enabled: boolean;
   product_type: string;
   download_count: number;
+  download_count_adjustment?: number;
   created_at: string;
   updated_at: string;
   variants?: DocumentVariant[];
