@@ -6,7 +6,7 @@ import { isVerifiedPaid } from "./client";
 export type PurchaseRow = {
   id: string;
   document_id: string;
-  variant_id: string | null;
+  variant_id?: string | null;
   customer_email: string | null;
   customer_phone: string | null;
   amount: number;
