@@ -55,11 +55,50 @@ export default function DocumentCard({
           <h3 className="mt-4 font-display text-lg text-ink">{localizedTitle}</h3>
           {localizedDescription && <p className="mt-2 line-clamp-4 text-sm leading-relaxed text-ink/80">{localizedDescription}</p>}
 
-          <div className="mt-4 flex flex-wrap gap-2 text-[11px] text-muted">
-            {activeVariant && <span className="rounded-full bg-line/60 px-2.5 py-1">{activeVariant.label}</span>}
-            <span className="rounded-full bg-line/60 px-2.5 py-1">{doc.download_count} {t.marketplace.downloads}</span>
-            <span className="rounded-full bg-line/60 px-2.5 py-1">{doc.reviews?.length ?? 0} {t.marketplace.reviews}</span>
-          </div>
+          {(() => {
+            const reviews = doc.reviews ?? [];
+            const reviewCount = reviews.length;
+            const averageRating =
+              reviewCount > 0
+                ? reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) /
+                  reviewCount
+                : 0;
+
+            return (
+              <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
+                {activeVariant && (
+                  <span className="rounded-full border border-line bg-paper/70 px-2.5 py-1 text-ink">
+                    {activeVariant.label}
+                  </span>
+                )}
+
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-paper/70 px-2.5 py-1 text-ink">
+                  <span aria-hidden="true">↓</span>
+                  <span className="font-medium">{doc.download_count}</span>
+                  <span className="text-ink/70">{t.marketplace.downloads}</span>
+                </span>
+
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-paper/70 px-2.5 py-1 text-ink">
+                  <span aria-hidden="true">▱</span>
+                  <span className="font-medium">{reviewCount}</span>
+                  <span className="text-ink/70">{t.marketplace.reviews}</span>
+                </span>
+
+                {reviewCount > 0 && (
+                  <span
+                    className="inline-flex items-center gap-1.5 rounded-full border border-line bg-paper/70 px-2.5 py-1 text-ink"
+                    aria-label={`${averageRating.toFixed(1)} out of 5 stars from ${reviewCount} reviews`}
+                    title={`${averageRating.toFixed(1)} / 5`}
+                  >
+                    <span className="tracking-[0.08em]" aria-hidden="true">
+                      ★★★★★
+                    </span>
+                    <span className="font-semibold">{averageRating.toFixed(1)}</span>
+                  </span>
+                )}
+              </div>
+            );
+          })()}
         </div>
 
         <div className="mt-6 flex items-center justify-between gap-3">
