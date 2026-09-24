@@ -59,6 +59,19 @@ export default function DocumentProductModal({
     setActiveImage(0);
   }, [variantId]);
 
+  useEffect(() => {
+    if (images.length <= 1) return;
+    const timer = window.setInterval(() => {
+      setActiveImage(current => (current + 1) % images.length);
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [images.length]);
+
+  function changeImage(next: number) {
+    if (!images.length) return;
+    setActiveImage((next + images.length) % images.length);
+  }
+
   async function handleDownload() {
     if (!doc.download_enabled || !doc.file_path) return;
     if (price > 0) {
@@ -115,8 +128,30 @@ export default function DocumentProductModal({
             <div className="p-5 sm:p-7">
               <div className="overflow-hidden rounded-2xl border border-line bg-black/5">
                 {images[activeImage] ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={getThumbnailUrl(images[activeImage]) ?? ""} alt={localizedTitle} className="aspect-[4/3] w-full object-contain" />
+                  <div className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={getThumbnailUrl(images[activeImage]) ?? ""} alt={localizedTitle} className="aspect-[4/3] w-full object-contain" />
+                    {images.length > 1 && (
+                      <>
+                        <button
+                          type="button"
+                          aria-label="Previous product image"
+                          onClick={() => changeImage(activeImage - 1)}
+                          className="focus-ring absolute left-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-xl text-white backdrop-blur-sm hover:bg-black/60"
+                        >
+                          ‹
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Next product image"
+                          onClick={() => changeImage(activeImage + 1)}
+                          className="focus-ring absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-xl text-white backdrop-blur-sm hover:bg-black/60"
+                        >
+                          ›
+                        </button>
+                      </>
+                    )}
+                  </div>
                 ) : (
                   <div className="flex aspect-[4/3] items-center justify-center text-sm text-muted">No image</div>
                 )}
