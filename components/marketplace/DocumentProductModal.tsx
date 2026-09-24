@@ -16,7 +16,9 @@ export default function DocumentProductModal({
   categoryName?: string;
   onClose: () => void;
 }) {
-  const { t } = useLanguage();
+  const { locale, t } = useLanguage();
+  const localizedTitle = locale === "so" ? (doc.title_so || doc.title_en || doc.title) : (doc.title_en || doc.title);
+  const localizedDescription = locale === "so" ? (doc.description_so || doc.description_en || doc.description) : (doc.description_en || doc.description);
   const [variantId, setVariantId] = useState<string | null>(doc.variants?.find(v => v.enabled)?.id ?? null);
   const [reviews, setReviews] = useState<DocumentReview[]>(doc.reviews ?? []);
   const [showBuy, setShowBuy] = useState(false);
@@ -113,7 +115,7 @@ export default function DocumentProductModal({
               <div className="overflow-hidden rounded-2xl border border-line bg-black/5">
                 {images[activeImage] ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={getThumbnailUrl(images[activeImage]) ?? ""} alt={doc.title} className="aspect-[4/3] w-full object-contain" />
+                  <img src={getThumbnailUrl(images[activeImage]) ?? ""} alt={localizedTitle} className="aspect-[4/3] w-full object-contain" />
                 ) : (
                   <div className="flex aspect-[4/3] items-center justify-center text-sm text-muted">No image</div>
                 )}
@@ -132,8 +134,8 @@ export default function DocumentProductModal({
             <div className="p-5 sm:p-7">
               {categoryName && <span className="rounded-full border border-line px-3 py-1 text-xs text-muted">{categoryName}</span>}
               <p className="mt-4 text-[10px] font-semibold uppercase tracking-[.18em] text-muted">{t.marketplace.productType}: {doc.product_type}</p>
-              <h2 className="mt-2 pr-8 font-display text-3xl text-ink">{doc.title}</h2>
-              {doc.description && <p className="mt-4 text-sm leading-6 text-muted">{doc.description}</p>}
+              <h2 className="mt-2 pr-8 font-display text-3xl text-ink">{localizedTitle}</h2>
+              {localizedDescription && <p className="mt-4 text-sm leading-6 text-muted">{localizedDescription}</p>}
 
               <div className="mt-5 flex flex-wrap gap-2 text-xs text-muted">
                 <span className="rounded-full bg-line/60 px-3 py-1">{doc.download_count} {t.marketplace.downloads}</span>
@@ -202,7 +204,7 @@ export default function DocumentProductModal({
         </section>
       </div>
 
-      {showBuy && <BuyModal documentId={doc.id} variantId={selectedVariant?.id ?? null} title={doc.title + (selectedVariant ? ` — ${selectedVariant.label}` : "")} price={price} onClose={() => setShowBuy(false)} />}
+      {showBuy && <BuyModal documentId={doc.id} variantId={selectedVariant?.id ?? null} title={localizedTitle + (selectedVariant ? ` — ${selectedVariant.label}` : "")} price={price} onClose={() => setShowBuy(false)} />}
       <style jsx>{`
         .admin-input { width: 100%; border: 1px solid var(--line); border-radius: .65rem; background: rgba(255,255,255,.6); padding: .65rem .75rem; font-size: .875rem; color: var(--ink); }
       `}</style>
