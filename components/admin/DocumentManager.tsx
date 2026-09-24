@@ -362,7 +362,19 @@ export default function DocumentManager() {
   }
 
   function addVariant() {
-    setForm(f => ({ ...f, variants: [...f.variants, { label: "", price: f.price, enabled: true, imageFiles: [], existingImages: [] }] }));
+    setForm(f => ({
+      ...f,
+      variants: [
+        ...f.variants,
+        {
+          label: "",
+          price: "",
+          enabled: true,
+          imageFiles: [],
+          existingImages: [],
+        },
+      ],
+    }));
   }
 
   function removeVariant(index: number) {
@@ -444,7 +456,9 @@ export default function DocumentManager() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <h3 className="font-medium text-ink">Levels / product options</h3>
-              <p className="text-xs text-muted">Add A1, A2, B1 … C1 or any product option. Each option can have its own price and images.</p>
+              <p className="text-xs text-muted">
+                Add A1, A2, B1 … C1 or any product option. A level can have its own custom price even when the whole document is Free.
+              </p>
             </div>
             <button type="button" onClick={addVariant} className="focus-ring rounded-full border border-line px-4 py-2 text-xs text-ink">+ Add level</button>
           </div>
@@ -455,7 +469,18 @@ export default function DocumentManager() {
                 <div key={v.id ?? `new-${index}`} className="rounded-xl border border-line/70 p-4">
                   <div className="grid gap-3 sm:grid-cols-[1fr_150px_auto]">
                     <input placeholder="A1 / A2 / Full bundle" value={v.label} onChange={e => updateVariant(index, { label: e.target.value })} className="admin-input" />
-                    <input type="number" min="0" step="0.01" value={v.price} onChange={e => updateVariant(index, { price: e.target.value })} className="admin-input disabled:opacity-50" />
+                    <label className="block">
+                      <span className="mb-1 block text-[11px] text-muted">Custom price (USD)</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={v.price}
+                        placeholder="0.00"
+                        onChange={e => updateVariant(index, { price: e.target.value })}
+                        className="admin-input"
+                      />
+                    </label>
                     <button type="button" onClick={() => removeVariant(index)} className="focus-ring rounded-lg border border-red-200 px-3 py-2 text-xs text-red-700">Remove</button>
                   </div>
                   <label className="mt-3 flex items-center gap-2 text-xs text-muted"><input type="checkbox" checked={v.enabled} onChange={e => updateVariant(index, { enabled: e.target.checked })} /> Show this option</label>
