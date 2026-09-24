@@ -60,8 +60,19 @@ export default function Testimonials() {
     s.from("testimonials")
       .select("id,name,rating,comment,approved")
       .eq("approved", true)
-      .order("created_at", { ascending: false })
-      .then(({ data }) => setItems((data ?? []) as Testimonial[]));
+      .then(({ data }) => {
+        const shuffled = [...((data ?? []) as Testimonial[])];
+
+        // Do not keep the database's newest-first order on the public wall.
+        // Shuffle the approved notes so the floating cards get a fresh
+        // arrangement instead of always appearing in the same sequence.
+        for (let i = shuffled.length - 1; i > 0; i -= 1) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+
+        setItems(shuffled);
+      });
   }, []);
 
   const bringToFront = (id: string) => setFrontId(id);
