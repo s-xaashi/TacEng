@@ -27,6 +27,7 @@ export default function BuyModal({
   onClose,
 }: {
   documentId: string;
+  variantId?: string | null;
   title: string;
   price: number;
   onClose: () => void;
@@ -84,6 +85,7 @@ export default function BuyModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           documentId,
+          variantId: variantId ?? undefined,
           gateway: selectedWallet.gateway,
           account: account.trim(),
         }),
@@ -116,7 +118,7 @@ export default function BuyModal({
       const res = await fetch("/api/checkout/hosted", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ documentId }),
+        body: JSON.stringify({ documentId, variantId: variantId ?? undefined }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not start checkout.");
