@@ -320,17 +320,33 @@ export default function DocumentManager() {
     if (!client) return;
     const issue = await requireAdmin(client);
     if (issue) { setError(issue); return; }
-    await client.storage.from("thumbnails").remove([image.image_path]);
-    const { error: deleteError } = await client.from("document_images").delete().eq("id", image.id);
-    if (deleteError) setError(deleteError.message);
-    else {
-      setForm(f => ({
-        ...f,
-        existingGeneralImages: f.existingGeneralImages.filter(i => i.id !== image.id),
-        variants: f.variants.map(v => ({ ...v, existingImages: v.existingImages.filter(i => i.id !== image.id) })),
-      }));
-      await load();
+    const { data: { session } } = await client.auth.getSession();
+    if (!session?.access_token) {
+      setError("Your admin session has expired. Please sign in again.");
+      return;
     }
+
+    const response = await fetch("/api/admin/document-images", {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ imageId: image.id }),
+    });
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      setError(body?.error || "Could not remove product image.");
+      return;
+    }
+
+    setForm(f => ({
+      ...f,
+      existingGeneralImages: f.existingGeneralImages.filter(i => i.id !== image.id),
+      variants: f.variants.map(v => ({ ...v, existingImages: v.existingImages.filter(i => i.id !== image.id) })),
+    }));
+    await load();
   }
 
   function effectiveDownloadCount(doc: MarketplaceDocument) {
