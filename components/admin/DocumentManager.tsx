@@ -259,6 +259,10 @@ export default function DocumentManager() {
           variantId = data.id;
         }
 
+        if (!variantId) {
+          throw new Error("Could not determine the product option ID.");
+        }
+
         await uploadImages(client, draft.imageFiles, documentId, variantId);
       }
 
