@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { WalletGateway } from "@/lib/sifalo/client";
 import DownloadPurchaseButton from "./DownloadPurchaseButton";
+import { useLanguage } from "@/components/LanguageProvider";
 
 type WalletOption = { label: string; gateway: WalletGateway };
 
@@ -33,6 +34,7 @@ export default function BuyModal({
   price: number;
   onClose: () => void;
 }) {
+  const { t } = useLanguage();
   const [screen, setScreen] = useState<Screen>("method");
   const [selectedWallet, setSelectedWallet] = useState<WalletOption>(WALLET_OPTIONS[0]);
   const [account, setAccount] = useState("");
@@ -40,6 +42,7 @@ export default function BuyModal({
   const [error, setError] = useState<string | null>(null);
   const [purchaseId, setPurchaseId] = useState<string | null>(null);
   const [walletStatus, setWalletStatus] = useState<WalletStatus>("pending");
+  const [walletFailureReason, setWalletFailureReason] = useState<"insufficient_balance" | "payment_failed" | null>(null);
   const [cardLoading, setCardLoading] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -60,9 +63,11 @@ export default function BuyModal({
         const data = await res.json();
         if (data.status === "paid") {
           setWalletStatus("paid");
+          setWalletFailureReason(null);
           if (pollRef.current) clearInterval(pollRef.current);
         } else if (data.status === "failed") {
           setWalletStatus("failed");
+          setWalletFailureReason(data.reason === "insufficient_balance" ? "insufficient_balance" : "payment_failed");
           if (pollRef.current) clearInterval(pollRef.current);
         }
       } catch {
@@ -99,8 +104,10 @@ export default function BuyModal({
 
       if (data.status === "paid") {
         setWalletStatus("paid");
+        setWalletFailureReason(null);
       } else if (data.status === "failed") {
         setWalletStatus("failed");
+        setWalletFailureReason(data.reason === "insufficient_balance" ? "insufficient_balance" : "payment_failed");
       } else {
         setWalletStatus("pending");
         startPolling(data.purchaseId);
@@ -133,6 +140,7 @@ export default function BuyModal({
   function retryWallet() {
     setScreen("wallet-form");
     setWalletStatus("pending");
+    setWalletFailureReason(null);
     setPurchaseId(null);
     setError(null);
   }
@@ -264,7 +272,9 @@ export default function BuyModal({
             {walletStatus === "failed" && (
               <>
                 <p className="text-sm text-red-700">
-                  Payment could not be completed. Please try again.
+                  {walletFailureReason === "insufficient_balance"
+                    ? t.marketplace.walletInsufficient
+                    : t.marketplace.walletFailed}
                 </p>
                 <button
                   type="button"
