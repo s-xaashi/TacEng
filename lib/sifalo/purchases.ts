@@ -6,6 +6,7 @@ import { isVerifiedPaid } from "./client";
 export type PurchaseRow = {
   id: string;
   document_id: string;
+  variant_id: string | null;
   customer_email: string | null;
   customer_phone: string | null;
   amount: number;
@@ -24,7 +25,7 @@ export type PurchaseRow = {
  * trust an amount the browser sends. Also refuses to start a purchase for
  * a free, unpublished, or nonexistent document.
  */
-export async function getPurchasableDocument(documentId: string) {
+export async function getPurchasableDocument(documentId: string, variantId?: string | null) {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("documents")
@@ -34,7 +35,20 @@ export async function getPurchasableDocument(documentId: string) {
 
   if (error || !data) return null;
   if (!data.published || data.is_free) return null;
-  return data;
+
+  if (variantId) {
+    const { data: variant, error: variantError } = await supabase
+      .from("document_variants")
+      .select("id, label, price, enabled, document_id")
+      .eq("id", variantId)
+      .eq("document_id", documentId)
+      .maybeSingle();
+
+    if (variantError || !variant || !variant.enabled) return null;
+    return { ...data, price: Number(variant.price), variant_id: variant.id, variant_label: variant.label };
+  }
+
+  return { ...data, variant_id: null, variant_label: null };
 }
 
 export function generatePaymentReference(): string {
@@ -44,6 +58,7 @@ export function generatePaymentReference(): string {
 
 export async function createPendingPurchase(params: {
   documentId: string;
+  variantId?: string | null;
   amount: number;
   currency: string;
   paymentMethod: string;
@@ -56,6 +71,7 @@ export async function createPendingPurchase(params: {
     .from("purchases")
     .insert({
       document_id: params.documentId,
+      variant_id: params.variantId ?? null,
       amount: params.amount,
       currency: params.currency,
       payment_method: params.paymentMethod,
