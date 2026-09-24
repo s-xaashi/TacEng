@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { getThumbnailUrl } from "@/lib/supabase/storage";
-import type { Category, DocumentImage, DocumentVariant, MarketplaceDocument } from "@/lib/supabase/types";
+import type { Category, DocumentImage, DocumentVariant, MarketplaceDocument, ProductType } from "@/lib/supabase/types";
 
 type DraftVariant = {
   id?: string;
@@ -58,18 +58,12 @@ const emptyForm: FormState = {
   existingGeneralImages: [],
 };
 
-const PRODUCT_TYPES = [
-  ["book", "Book"],
-  ["workbook", "Workbook"],
-  ["course", "Course"],
-  ["template", "Template"],
-  ["guide", "Guide"],
-  ["other", "Other"],
-];
-
 export default function DocumentManager() {
   const [categories, setCategories] = useState<Category[]>([]);
+  const [productTypes, setProductTypes] = useState<ProductType[]>([]);
   const [documents, setDocuments] = useState<MarketplaceDocument[]>([]);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newProductTypeName, setNewProductTypeName] = useState("");
   const [allImages, setAllImages] = useState<DocumentImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState<FormState>(emptyForm);
@@ -80,12 +74,14 @@ export default function DocumentManager() {
     const client = getSupabaseClient();
     if (!client) return;
     setLoading(true);
-    const [{ data: cats }, { data: docs }, { data: images }] = await Promise.all([
+    const [{ data: cats }, { data: types }, { data: docs }, { data: images }] = await Promise.all([
       client.from("categories").select("id, name, slug").order("name"),
+      client.from("product_types").select("id, name, slug").order("name"),
       client.from("documents").select("id, title, description, title_en, description_en, title_so, description_so, category_id, file_path, thumbnail_path, price, is_free, payment_link, published, download_enabled, product_type, download_count, download_count_adjustment, created_at, updated_at").order("created_at", { ascending: false }),
       client.from("document_images").select("id, document_id, variant_id, image_path, alt_text, sort_order, created_at").order("sort_order"),
     ]);
     setCategories(cats ?? []);
+    setProductTypes(types ?? []);
     setDocuments(docs ?? []);
     setAllImages(images ?? []);
     setLoading(false);
@@ -456,7 +452,7 @@ export default function DocumentManager() {
           <div />
           <Field label="Product type">
             <select value={form.product_type} onChange={e => setForm(f => ({ ...f, product_type: e.target.value }))} className="admin-input">
-              {PRODUCT_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              {productTypes.map(type => <option key={type.id} value={type.slug}>{type.name}</option>)}
             </select>
           </Field>
         </div>
@@ -590,6 +586,70 @@ export default function DocumentManager() {
           {form.id && <button type="button" onClick={resetForm} className="focus-ring rounded-full border border-line px-6 py-3 text-sm text-ink">Cancel</button>}
         </div>
       </form>
+
+      <div className="mt-8 grid gap-5 sm:grid-cols-2">
+        <div className="rounded-2xl border border-line p-4">
+          <h3 className="font-medium text-ink">Categories</h3>
+          <p className="mt-1 text-xs text-muted">Add categories here. New categories immediately appear in the public marketplace.</p>
+          <div className="mt-3 flex gap-2">
+            <input
+              value={newCategoryName}
+              onChange={e => setNewCategoryName(e.target.value)}
+              placeholder="e.g. Health"
+              maxLength={80}
+              className="admin-input"
+            />
+            <button type="button" onClick={async () => {
+              const name = newCategoryName.trim().replace(/\s+/g, " ");
+              if (!name) return;
+              const slug = name.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+              if (!slug) { setError("Category name must contain letters or numbers."); return; }
+              const client = getSupabaseClient();
+              if (!client) return;
+              const issue = await requireAdmin(client);
+              if (issue) { setError(issue); return; }
+              const { error: insertError } = await client.from("categories").insert({ name, slug });
+              if (insertError) { setError(insertError.code === "23505" ? "That category already exists." : insertError.message); return; }
+              setNewCategoryName("");
+              await load();
+            }} className="focus-ring shrink-0 rounded-full bg-ink px-4 py-2 text-xs text-paper">Add</button>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {categories.map(category => <span key={category.id} className="rounded-full border border-line px-3 py-1 text-xs text-muted">{category.name}</span>)}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-line p-4">
+          <h3 className="font-medium text-ink">Product types</h3>
+          <p className="mt-1 text-xs text-muted">Add types such as Quiz, Notes, Checklist or any product format.</p>
+          <div className="mt-3 flex gap-2">
+            <input
+              value={newProductTypeName}
+              onChange={e => setNewProductTypeName(e.target.value)}
+              placeholder="e.g. Quiz"
+              maxLength={80}
+              className="admin-input"
+            />
+            <button type="button" onClick={async () => {
+              const name = newProductTypeName.trim().replace(/\s+/g, " ");
+              if (!name) return;
+              const slug = name.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+              if (!slug) { setError("Product type name must contain letters or numbers."); return; }
+              const client = getSupabaseClient();
+              if (!client) return;
+              const issue = await requireAdmin(client);
+              if (issue) { setError(issue); return; }
+              const { error: insertError } = await client.from("product_types").insert({ name, slug });
+              if (insertError) { setError(insertError.code === "23505" ? "That product type already exists." : insertError.message); return; }
+              setNewProductTypeName("");
+              await load();
+            }} className="focus-ring shrink-0 rounded-full bg-ink px-4 py-2 text-xs text-paper">Add</button>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {productTypes.map(type => <span key={type.id} className="rounded-full border border-line px-3 py-1 text-xs text-muted">{type.name}</span>)}
+          </div>
+        </div>
+      </div>
 
       <div className="mt-10">
         <div className="flex items-end justify-between gap-4">
