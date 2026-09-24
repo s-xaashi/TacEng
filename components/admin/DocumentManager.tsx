@@ -11,6 +11,9 @@ type DraftVariant = {
   price: string;
   enabled: boolean;
   imageFiles: File[];
+  productFile: File | null;
+  existingFilePath: string | null;
+  existingFileBucket: "free-documents" | "paid-documents" | null;
   existingImages: DocumentImage[];
 };
 
@@ -132,6 +135,9 @@ export default function DocumentManager() {
         price: String(v.price),
         enabled: v.enabled,
         imageFiles: [],
+        productFile: null,
+        existingFilePath: v.file_path ?? null,
+        existingFileBucket: v.file_bucket ?? null,
         existingImages: imgs.filter(i => i.variant_id === v.id),
       })),
       existingGeneralImages: imgs.filter(i => !i.variant_id),
@@ -287,14 +293,63 @@ export default function DocumentManager() {
 
       for (const [index, draft] of form.variants.entries()) {
         let variantId = draft.id;
+        const label = draft.label.trim();
+        if (!label) continue;
+
+        const variantPrice = Math.max(0, Number(draft.price) || 0);
+        const desiredBucket = variantPrice > 0 ? "paid-documents" : "free-documents";
+        let variantFilePath = draft.existingFilePath;
+        let variantFileBucket = draft.existingFileBucket;
+
+        if (draft.productFile) {
+          if (draft.productFile.size > 50 * 1024 * 1024) {
+            throw new Error("Level files must be 50 MB or smaller.");
+          }
+          const path = `products/${documentId}/levels/${crypto.randomUUID()}-${draft.productFile.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+          const { error: uploadError } = await client.storage
+            .from(desiredBucket)
+            .upload(path, draft.productFile, {
+              upsert: false,
+              contentType: draft.productFile.type || "application/octet-stream",
+              cacheControl: "31536000",
+            });
+          if (uploadError) throw uploadError;
+          variantFilePath = path;
+          variantFileBucket = desiredBucket;
+        } else if (!variantFilePath && index === 0 && filePath) {
+          // The first level automatically uses the main product upload.
+          // This is safe only when the level's free/paid access matches the
+          // main product's storage bucket.
+          const mainBucket = form.is_free ? "free-documents" : "paid-documents";
+          if (desiredBucket === mainBucket) {
+            variantFilePath = filePath;
+            variantFileBucket = mainBucket;
+          }
+        }
+
+        if (!variantFilePath || !variantFileBucket) {
+          throw new Error(
+            index === 0
+              ? "The first level needs a file. It can use the main product file automatically when its price matches the product access type."
+              : "Each additional level needs its own downloadable file."
+          );
+        }
+
+        if (variantFileBucket !== desiredBucket) {
+          throw new Error(
+            `Level "${label}" needs a new file upload because its ${variantPrice > 0 ? "paid" : "free"} access type does not match its current file storage.`
+          );
+        }
+
         const variantPayload = {
           document_id: documentId,
-          label: draft.label.trim(),
-          price: Math.max(0, Number(draft.price) || 0),
+          label,
+          price: variantPrice,
           enabled: draft.enabled,
           sort_order: index,
+          file_path: variantFilePath,
+          file_bucket: variantFileBucket,
         };
-        if (!variantPayload.label) continue;
 
         if (variantId) {
           const { error: updateError } = await client.from("document_variants").update(variantPayload).eq("id", variantId);
@@ -305,10 +360,7 @@ export default function DocumentManager() {
           variantId = data.id;
         }
 
-        if (!variantId) {
-          throw new Error("Could not determine the product option ID.");
-        }
-
+        if (!variantId) throw new Error("Could not determine the product option ID.");
         await uploadImages(client, draft.imageFiles, documentId, variantId);
       }
 
@@ -423,6 +475,9 @@ export default function DocumentManager() {
           price: "",
           enabled: true,
           imageFiles: [],
+          productFile: null,
+          existingFilePath: null,
+          existingFileBucket: null,
           existingImages: [],
         },
       ],
@@ -536,12 +591,47 @@ export default function DocumentManager() {
                     <button type="button" onClick={() => removeVariant(index)} className="focus-ring rounded-lg border border-red-200 px-3 py-2 text-xs text-red-700">Remove</button>
                   </div>
                   <label className="mt-3 flex items-center gap-2 text-xs text-muted"><input type="checkbox" checked={v.enabled} onChange={e => updateVariant(index, { enabled: e.target.checked })} /> Show this option</label>
-                  <input type="file" accept="image/*" multiple onChange={e => updateVariant(index, { imageFiles: Array.from(e.target.files ?? []) })} className="mt-3 w-full text-xs text-ink" />
-                  {v.existingImages.length > 0 && (
-                    <div className="mt-3 flex gap-2 overflow-x-auto">
-                      {v.existingImages.map(image => <ImageThumb key={image.id} image={image} onRemove={() => removeImage(image)} />)}
-                    </div>
-                  )}
+
+                  <div className="mt-4 rounded-lg border border-line/70 p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+                      Downloadable file for this level
+                    </p>
+                    {v.existingFilePath ? (
+                      <p className="mt-1 break-all text-xs text-ink">
+                        Current file: <strong>{v.existingFilePath.split("/").pop()}</strong>
+                      </p>
+                    ) : index === 0 ? (
+                      <p className="mt-1 text-xs leading-5 text-muted">
+                        The first level will use the main Product file automatically when its price has the same Free/Paid access type.
+                      </p>
+                    ) : (
+                      <p className="mt-1 text-xs leading-5 text-muted">
+                        Upload the specific file customers should receive when they choose this level.
+                      </p>
+                    )}
+                    <input
+                      type="file"
+                      accept="*/*"
+                      required={index > 0 && !v.existingFilePath}
+                      onChange={e => updateVariant(index, { productFile: e.target.files?.[0] ?? null })}
+                      className="mt-3 w-full text-xs text-ink"
+                    />
+                    {v.productFile && (
+                      <p className="mt-1 text-xs text-ink">
+                        Selected: <strong>{v.productFile.name}</strong>
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="mt-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">Level images</p>
+                    <input type="file" accept="image/*" multiple onChange={e => updateVariant(index, { imageFiles: Array.from(e.target.files ?? []) })} className="mt-2 w-full text-xs text-ink" />
+                    {v.existingImages.length > 0 && (
+                      <div className="mt-3 flex gap-2 overflow-x-auto">
+                        {v.existingImages.map(image => <ImageThumb key={image.id} image={image} onRemove={() => removeImage(image)} />)}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
