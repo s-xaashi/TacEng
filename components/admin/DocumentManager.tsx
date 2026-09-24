@@ -221,6 +221,10 @@ export default function DocumentManager() {
         documentId = data.id;
       }
 
+      if (!documentId) {
+        throw new Error("Could not determine the document ID.");
+      }
+
       const existingVariantIds = (await client.from("document_variants").select("id").eq("document_id", documentId)).data?.map(v => v.id) ?? [];
       const keepVariantIds = form.variants.flatMap(v => v.id ? [v.id] : []);
       const removedVariantIds = existingVariantIds.filter(id => !keepVariantIds.includes(id));
