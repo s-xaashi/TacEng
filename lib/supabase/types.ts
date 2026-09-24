@@ -40,6 +40,10 @@ export type MarketplaceDocument = {
   id: string;
   title: string;
   description: string | null;
+  title_en?: string | null;
+  description_en?: string | null;
+  title_so?: string | null;
+  description_so?: string | null;
   category_id: string | null;
   file_path: string | null;
   thumbnail_path: string | null;
