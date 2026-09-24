@@ -33,25 +33,41 @@ export default function MarketplacePage() {
     let cancelled = false;
 
     async function load() {
-      const [{ data: cats, error: catErr }, { data: docs, error: docErr }] =
-        await Promise.all([
-          supabase!.from("categories").select("id, name, slug").order("name"),
-          supabase!
-            .from("documents")
-            .select(
-              "id, title, description, category_id, file_path, thumbnail_path, price, is_free, payment_link, published, download_count, created_at, updated_at"
-            )
-            .eq("published", true)
-            .order("created_at", { ascending: false }),
-        ]);
+      const [
+        { data: cats, error: catErr },
+        { data: docs, error: docErr },
+        { data: variants, error: variantErr },
+        { data: images, error: imageErr },
+        { data: reviews, error: reviewErr },
+      ] = await Promise.all([
+        supabase!.from("categories").select("id, name, slug").order("name"),
+        supabase!
+          .from("documents")
+          .select("id, title, description, category_id, file_path, thumbnail_path, price, is_free, payment_link, published, download_enabled, product_type, download_count, created_at, updated_at")
+          .eq("published", true)
+          .order("created_at", { ascending: false }),
+        supabase!.from("document_variants").select("*").eq("enabled", true).order("sort_order"),
+        supabase!.from("document_images").select("*").order("sort_order"),
+        supabase!.from("document_reviews").select("*").eq("approved", true).order("created_at", { ascending: false }),
+      ]);
 
       if (cancelled) return;
 
-      if (catErr || docErr) {
-        setError((catErr ?? docErr)?.message ?? "Failed to load marketplace.");
+      if (catErr || docErr || variantErr || imageErr || reviewErr) {
+        setError((catErr ?? docErr ?? variantErr ?? imageErr ?? reviewErr)?.message ?? "Failed to load marketplace.");
       } else {
         setCategories(cats ?? []);
-        setDocuments(docs ?? []);
+        const variantRows = variants ?? [];
+        const imageRows = images ?? [];
+        const reviewRows = reviews ?? [];
+        setDocuments(
+          (docs ?? []).map((doc) => ({
+            ...doc,
+            variants: variantRows.filter((v) => v.document_id === doc.id),
+            images: imageRows.filter((i) => i.document_id === doc.id),
+            reviews: reviewRows.filter((r) => r.document_id === doc.id),
+          }))
+        );
       }
       setLoading(false);
     }
