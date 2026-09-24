@@ -43,7 +43,7 @@ export default function MarketplacePage() {
         supabase!.from("categories").select("id, name, slug").order("name"),
         supabase!
           .from("documents")
-          .select("id, title, description, category_id, file_path, thumbnail_path, price, is_free, payment_link, published, download_enabled, product_type, download_count, created_at, updated_at")
+          .select("id, title, description, title_en, description_en, title_so, description_so, category_id, file_path, thumbnail_path, price, is_free, payment_link, published, download_enabled, product_type, download_count, created_at, updated_at")
           .eq("published", true)
           .order("created_at", { ascending: false }),
         supabase!.from("document_variants").select("*").eq("enabled", true).order("sort_order"),
@@ -103,7 +103,8 @@ export default function MarketplacePage() {
         : undefined;
       const matchesCategory =
         activeCategory === "all" || doc.category_id === activeCategory;
-      const matchesQuery = doc.title
+      const localizedTitle = locale === "so" ? (doc.title_so || doc.title_en || doc.title) : (doc.title_en || doc.title);
+      const matchesQuery = localizedTitle
         .toLowerCase()
         .includes(query.trim().toLowerCase());
       return matchesCategory && matchesQuery;
