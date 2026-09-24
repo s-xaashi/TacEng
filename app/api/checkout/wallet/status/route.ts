@@ -36,6 +36,24 @@ export async function POST(req: NextRequest) {
 
   const verify = await verifyTransaction({ sid: purchase.provider_transaction_id });
   const updated = await applyVerifyResult(purchase, verify);
+  const reason =
+    updated.status === "failed"
+      ? verify.code === "604"
+        ? "insufficient_balance"
+        : "payment_failed"
+      : null;
 
-  return NextResponse.json({ status: updated.status, message: verify.response ?? null });
+  return NextResponse.json({
+    status: updated.status,
+    reason,
+    code: verify.code,
+    message:
+      updated.status === "pending"
+        ? "Payment is being processed. Please approve it on your phone if requested."
+        : updated.status === "paid"
+          ? "Payment successful."
+          : verify.code === "604"
+            ? "Payment failed. Your account balance is not enough for this payment."
+            : "Payment failed. Please check your wallet details and try again.",
+  });
 }
