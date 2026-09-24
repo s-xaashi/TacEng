@@ -85,10 +85,22 @@ export async function POST(req: NextRequest) {
       currency,
     });
 
+    const failureReason =
+      result.code === "604" ? "insufficient_balance" : "payment_failed";
+
     return NextResponse.json({
       purchaseId: updated.id,
       status: updated.status,
-      message: result.response ?? null,
+      reason: updated.status === "failed" ? failureReason : null,
+      code: result.code,
+      message:
+        updated.status === "pending"
+          ? "Payment is being processed. Please approve it on your phone if requested."
+          : updated.status === "paid"
+            ? "Payment successful."
+            : result.code === "604"
+              ? "Payment failed. Your account balance is not enough for this payment."
+              : "Payment failed. Please check your wallet details and try again.",
     });
   } catch (err) {
     return NextResponse.json(
