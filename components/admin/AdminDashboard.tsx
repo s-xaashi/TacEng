@@ -8,7 +8,6 @@ import BlogManager from "@/components/admin/BlogManager";
 import LearningManager from "@/components/admin/LearningManager";
 import TestimonialsManager from "@/components/admin/TestimonialsManager";
 import SocialLinksManager from "@/components/admin/SocialLinksManager";
-import DocumentReviewsManager from "@/components/admin/DocumentReviewsManager";
 
 export default function AdminDashboard() {
   return (
@@ -20,7 +19,6 @@ export default function AdminDashboard() {
       </div>
 
       <DocumentManager />
-      <DocumentReviewsManager />
       <ProjectsManager />
       <PortfolioContentManager />
       <ExperienceManager />
