@@ -34,13 +34,20 @@ export function useAdminAuth() {
       try {
         setError(null);
 
-        const timeout = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error("Authentication check timed out. Please try again.")), 10000),
-        );
+        const withTimeout = <T,>(promise: PromiseLike<T>, message: string) =>
+          Promise.race([
+            promise,
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error(message)), 10000),
+            ),
+          ]);
 
         const {
           data: { user: currentUser },
-        } = await Promise.race([supabase.auth.getUser(), timeout]);
+        } = await withTimeout(
+          supabase.auth.getUser(),
+          "Authentication check timed out. Please try again.",
+        );
 
         if (cancelled) return;
 
@@ -53,14 +60,14 @@ export function useAdminAuth() {
 
         setUser(currentUser);
 
-        const { data: adminRow, error: adminError } = await Promise.race([
+        const { data: adminRow, error: adminError } = await withTimeout(
           supabase
             .from("admins")
             .select("user_id")
             .eq("user_id", currentUser.id)
             .maybeSingle(),
-          timeout,
-        ]);
+          "Admin access check timed out. Please try again.",
+        );
 
         if (cancelled) return;
 
