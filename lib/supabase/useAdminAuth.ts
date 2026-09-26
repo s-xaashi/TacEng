@@ -21,13 +21,16 @@ export function useAdminAuth() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
+    const client = getSupabaseClient();
+    if (!client) {
       setState("error");
       setError("Supabase is not configured. Please check the deployment environment variables.");
       router.push("/admin/login");
       return;
     }
+
+    // Stable non-null alias so TypeScript keeps the narrowing inside async callbacks.
+    const supabase = client;
 
     let cancelled = false;
 
