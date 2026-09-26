@@ -136,7 +136,7 @@ export default function MarketplaceAdPopup() {
     event.preventDefault();
     setSubmitting(true);
     try {
-      const response = await fetch("https://jboruccxbgdqntrggslz.supabase.co/functions/v1/submit-ad-lead", {
+      const response = await fetch("https://bbksqsgupyytiahmbzmk.supabase.co/functions/v1/submit-ad-lead", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
