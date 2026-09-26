@@ -76,6 +76,17 @@ export default function DocumentManager() {
   const [error, setError] = useState<string | null>(null);
   const productsCarouselRef = useRef<HTMLDivElement | null>(null);
 
+  function scrollProducts(direction: "left" | "right") {
+    const carousel = productsCarouselRef.current;
+    if (!carousel) return;
+
+    const amount = Math.max(carousel.clientWidth * 0.9, 280);
+    carousel.scrollBy({
+      left: direction === "left" ? -amount : amount,
+      behavior: "smooth",
+    });
+  }
+
   const load = useCallback(async () => {
     const client = getSupabaseClient();
     if (!client) return;
@@ -612,6 +623,11 @@ export default function DocumentManager() {
           </Field>
           <Field label="Base price (USD)">
             <input type="number" min="0" step="0.01" disabled={form.is_free} value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} className="admin-input disabled:opacity-50" />
+            {form.is_free && (
+              <p className="mt-1 text-[11px] leading-4 text-muted">
+                The whole document is free. Level prices below are still independent and can be set as custom paid prices.
+              </p>
+            )}
           </Field>
           <div>
             <span className="text-sm text-muted">Access</span>
@@ -651,7 +667,7 @@ export default function DocumentManager() {
                   <div className="grid gap-3 sm:grid-cols-[1fr_150px_auto]">
                     <input placeholder="A1 / A2 / Full bundle" value={v.label} onChange={e => updateVariant(index, { label: e.target.value })} className="admin-input" />
                     <label className="block">
-                      <span className="mb-1 block text-[11px] text-muted">Custom price (USD)</span>
+                      <span className="mb-1 block text-[11px] text-muted">Level price (USD)</span>
                       <input
                         type="number"
                         min="0"
