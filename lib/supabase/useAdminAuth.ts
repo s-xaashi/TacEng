@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
-export type AdminAuthState = "checking" | "signed-out" | "not-admin" | "admin";
+export type AdminAuthState = "checking" | "signed-out" | "not-admin" | "admin" | "error";
 
 /**
  * Single source of truth for "is this an authenticated admin". Every
@@ -17,43 +17,67 @@ export type AdminAuthState = "checking" | "signed-out" | "not-admin" | "admin";
 export function useAdminAuth() {
   const router = useRouter();
   const [state, setState] = useState<AdminAuthState>("checking");
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(null);\n  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const supabase = getSupabaseClient();
     if (!supabase) {
-      setState("signed-out");
+      setState("error");
+      setError("Supabase is not configured. Please check the deployment environment variables.");
+      router.push("/admin/login");
       return;
     }
 
     let cancelled = false;
 
     async function check() {
-      const {
-        data: { user: currentUser },
-      } = await supabase!.auth.getUser();
+      try {
+        setError(null);
 
-      if (cancelled) return;
+        const timeout = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Authentication check timed out. Please try again.")), 10000),
+        );
 
-      if (!currentUser) {
-        setState("signed-out");
-        router.push("/admin/login");
-        return;
+        const {
+          data: { user: currentUser },
+        } = await Promise.race([supabase.auth.getUser(), timeout]);
+
+        if (cancelled) return;
+
+        if (!currentUser) {
+          setUser(null);
+          setState("signed-out");
+          router.push("/admin/login");
+          return;
+        }
+
+        setUser(currentUser);
+
+        const { data: adminRow, error: adminError } = await Promise.race([
+          supabase
+            .from("admins")
+            .select("user_id")
+            .eq("user_id", currentUser.id)
+            .maybeSingle(),
+          timeout,
+        ]);
+
+        if (cancelled) return;
+
+        if (adminError) {
+          throw adminError;
+        }
+
+        setState(adminRow ? "admin" : "not-admin");
+      } catch (err) {
+        if (cancelled) return;
+        console.error("Admin access check failed:", err);
+        setError(err instanceof Error ? err.message : "Unable to verify admin access.");
+        setState("error");
       }
-
-      setUser(currentUser);
-
-      const { data: adminRow } = await supabase!
-        .from("admins")
-        .select("user_id")
-        .eq("user_id", currentUser.id)
-        .maybeSingle();
-
-      if (cancelled) return;
-      setState(adminRow ? "admin" : "not-admin");
     }
 
-    check();
+    void check();
 
     // If the session disappears (sign-out in another tab, expiry, etc.)
     // bounce back to login immediately rather than leaving a stale page up.
@@ -80,5 +104,5 @@ export function useAdminAuth() {
     router.refresh();
   }
 
-  return { state, user, signOut };
+  return { state, user, error, signOut };
 }
