@@ -44,9 +44,10 @@ export default function MarketplaceAdPopup() {
     let cancelled = false;
     const client = getSupabaseClient();
     if (!client) return;
+    const supabase = client;
 
     async function load() {
-      const { data } = await client
+      const { data } = await supabase
         .from("ad_campaigns")
         .select("*")
         .eq("status", "active")
@@ -66,7 +67,7 @@ export default function MarketplaceAdPopup() {
         setCampaign(eligible);
         remember("marketplace_ad_seen_" + eligible.id, SEEN_DAYS);
         const id = visitorId();
-        void client.from("ad_events").insert({ campaign_id: eligible.id, event_type: "impression", visitor_id: id });
+        void supabase.from("ad_events").insert({ campaign_id: eligible.id, event_type: "impression", visitor_id: id });
       }
     }
 
@@ -75,22 +76,23 @@ export default function MarketplaceAdPopup() {
   }, []);
 
   if (!campaign) return null;
+  const activeCampaign = campaign;
 
   function close() {
-    remember("marketplace_ad_dismissed_" + campaign.id, DISMISS_DAYS);
+    remember("marketplace_ad_dismissed_" + activeCampaign.id, DISMISS_DAYS);
     setCampaign(null);
   }
 
   async function interested() {
     const client = getSupabaseClient();
-    if (client) void client.from("ad_events").insert({ campaign_id: campaign.id, event_type: "interested", visitor_id: visitorId() });
+    if (client) void client.from("ad_events").insert({ campaign_id: activeCampaign.id, event_type: "interested", visitor_id: visitorId() });
 
-    if (campaign.ad_type === "announcement") {
+    if (activeCampaign.ad_type === "announcement") {
       close();
       return;
     }
 
-    if (campaign.ad_type === "form") {
+    if (activeCampaign.ad_type === "form") {
       setView("action");
       const client = getSupabaseClient();
       if (!client) return;
@@ -98,21 +100,21 @@ export default function MarketplaceAdPopup() {
       const { data } = await client
         .from("ad_form_fields")
         .select("*")
-        .eq("campaign_id", campaign.id)
+        .eq("campaign_id", activeCampaign.id)
         .order("sort_order");
       setFormFields((data ?? []) as AdFormField[]);
       setLoadingForm(false);
       return;
     }
 
-    if (campaign.action_type === "coupon") {
+    if (activeCampaign.action_type === "coupon") {
       setView("action");
       return;
     }
 
-    const url = safeExternalUrl(campaign.redirect_url);
+    const url = safeExternalUrl(activeCampaign.redirect_url);
     if (url) {
-      if (client) void client.from("ad_events").insert({ campaign_id: campaign.id, event_type: "action", visitor_id: visitorId() });
+      if (client) void client.from("ad_events").insert({ campaign_id: activeCampaign.id, event_type: "action", visitor_id: visitorId() });
       window.open(url, "_blank", "noopener,noreferrer");
       close();
     }
@@ -120,16 +122,16 @@ export default function MarketplaceAdPopup() {
 
   function notInterested() {
     const client = getSupabaseClient();
-    if (client) void client.from("ad_events").insert({ campaign_id: campaign.id, event_type: "not_interested", visitor_id: visitorId() });
+    if (client) void client.from("ad_events").insert({ campaign_id: activeCampaign.id, event_type: "not_interested", visitor_id: visitorId() });
     close();
   }
 
   async function copyCoupon() {
-    if (!campaign.coupon_code) return;
-    await navigator.clipboard.writeText(campaign.coupon_code);
+    if (!activeCampaign.coupon_code) return;
+    await navigator.clipboard.writeText(activeCampaign.coupon_code);
     setCopied(true);
     const client = getSupabaseClient();
-    if (client) void client.from("ad_events").insert({ campaign_id: campaign.id, event_type: "coupon_copy", visitor_id: visitorId() });
+    if (client) void client.from("ad_events").insert({ campaign_id: activeCampaign.id, event_type: "coupon_copy", visitor_id: visitorId() });
     window.setTimeout(() => setCopied(false), 1800);
   }
 
@@ -143,7 +145,7 @@ export default function MarketplaceAdPopup() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          campaignId: campaign.id,
+          campaignId: activeCampaign.id,
           visitorId: visitorId(),
           locale,
           data: formData,
@@ -160,10 +162,10 @@ export default function MarketplaceAdPopup() {
     }
   }
 
-  const actionTitle = localized(campaign.coupon_title_en, campaign.coupon_title_so, locale);
-  const actionDescription = localized(campaign.coupon_description_en, campaign.coupon_description_so, locale);
-  const actionHighlights = localizedList(campaign.coupon_highlights_en, campaign.coupon_highlights_so, locale);
-  const actionCta = localized(campaign.cta_en, campaign.cta_so, locale) || (locale === "so" ? "Waan xiiseynayaa" : "I'm Interested");
+  const actionTitle = localized(activeCampaign.coupon_title_en, activeCampaign.coupon_title_so, locale);
+  const actionDescription = localized(activeCampaign.coupon_description_en, activeCampaign.coupon_description_so, locale);
+  const actionHighlights = localizedList(activeCampaign.coupon_highlights_en, activeCampaign.coupon_highlights_so, locale);
+  const actionCta = localized(activeCampaign.cta_en, activeCampaign.cta_so, locale) || (locale === "so" ? "Waan xiiseynayaa" : "I'm Interested");
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label={title}>
@@ -182,7 +184,7 @@ export default function MarketplaceAdPopup() {
               <button type="button" onClick={notInterested} className="focus-ring rounded-full border border-white/15 px-5 py-3 text-sm text-white/70 hover:text-white">{locale === "so" ? "Ma xiiseynayo" : "Not interested"}</button>
             </div>
           </>
-        ) : campaign.ad_type === "action" && campaign.action_type === "coupon" ? (
+        ) : activeCampaign.ad_type === "action" && activeCampaign.action_type === "coupon" ? (
           <>
             {couponImageUrl && <img src={couponImageUrl} alt="" className="mb-5 max-h-64 w-full rounded-2xl object-cover" />}
             <p className="text-[10px] uppercase tracking-[.22em] text-[#d8e06b]">{locale === "so" ? "Coupon" : "Coupon"}</p>
@@ -190,18 +192,18 @@ export default function MarketplaceAdPopup() {
             {actionDescription && <p className="mt-3 whitespace-pre-line text-sm leading-6 text-white/65">{actionDescription}</p>}
             {actionHighlights.length > 0 && <ul className="mt-4 space-y-2 text-sm text-white/75">{actionHighlights.map((item, i) => <li key={i}>• {item}</li>)}</ul>}
             <div className="mt-6 flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[.04] p-4">
-              <code className="break-all text-lg font-semibold tracking-[.12em] text-[#d8e06b]">{campaign.coupon_code}</code>
+              <code className="break-all text-lg font-semibold tracking-[.12em] text-[#d8e06b]">{activeCampaign.coupon_code}</code>
               <button type="button" onClick={copyCoupon} className="focus-ring shrink-0 rounded-full bg-white px-4 py-2 text-xs font-semibold text-[#170607]">{copied ? (locale === "so" ? "La koobiyey" : "Copied") : (locale === "so" ? "Koobi" : "Copy coupon")}</button>
             </div>
             <a
-              href={safeExternalUrl(campaign.redirect_url) ?? "#"}
+              href={safeExternalUrl(activeCampaign.redirect_url) ?? "#"}
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => {
-                const url = safeExternalUrl(campaign.redirect_url);
+                const url = safeExternalUrl(activeCampaign.redirect_url);
                 if (!url) { e.preventDefault(); return; }
                 const client = getSupabaseClient();
-                if (client) void client.from("ad_events").insert({ campaign_id: campaign.id, event_type: "action", visitor_id: visitorId() });
+                if (client) void client.from("ad_events").insert({ campaign_id: activeCampaign.id, event_type: "action", visitor_id: visitorId() });
               }}
               className="focus-ring mt-4 block rounded-full bg-[#e45560] px-5 py-3 text-center text-sm font-semibold text-white"
             >
