@@ -73,7 +73,8 @@ export default function DocumentManager() {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);\n  const productsCarouselRef = useRef<HTMLDivElement | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const productsCarouselRef = useRef<HTMLDivElement | null>(null);
 
   const load = useCallback(async () => {
     const client = getSupabaseClient();
