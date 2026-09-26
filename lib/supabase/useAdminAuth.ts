@@ -17,7 +17,8 @@ export type AdminAuthState = "checking" | "signed-out" | "not-admin" | "admin" |
 export function useAdminAuth() {
   const router = useRouter();
   const [state, setState] = useState<AdminAuthState>("checking");
-  const [user, setUser] = useState<User | null>(null);\n  const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const supabase = getSupabaseClient();
