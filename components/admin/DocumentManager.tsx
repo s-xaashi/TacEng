@@ -444,6 +444,19 @@ export default function DocumentManager() {
     else await load();
   }
 
+  async function setDisplayedDownloadCount(doc: MarketplaceDocument, displayedCount: number) {
+    const client = getSupabaseClient();
+    if (!client) return;
+    const issue = await requireAdmin(client);
+    if (issue) { setError(issue); return; }
+    const actual = Math.max(0, Number(doc.download_count ?? 0));
+    const target = Math.max(0, Math.floor(Number.isFinite(displayedCount) ? displayedCount : actual));
+    const { error: updateError } = await client.from("documents").update({
+      download_count_adjustment: target - actual,
+    }).eq("id", doc.id);
+    if (updateError) setError(updateError.message);
+    else await load();
+  }
   async function resetDownloadCount(doc: MarketplaceDocument) {
     const client = getSupabaseClient();
     if (!client) return;
@@ -648,6 +661,46 @@ export default function DocumentManager() {
             <input type="checkbox" checked={form.published} onChange={e => setForm(f => ({ ...f, published: e.target.checked }))} />
           </label>
         </div>
+        {form.id && (() => {
+          const currentDoc = documents.find(doc => doc.id === form.id);
+          if (!currentDoc) return null;
+          const actual = Math.max(0, Number(currentDoc.download_count ?? 0));
+          const displayed = effectiveDownloadCount(currentDoc);
+          return (
+            <div className="rounded-2xl border border-line p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="font-medium text-ink">Download count settings</h3>
+                  <p className="mt-1 text-xs leading-5 text-muted">
+                    Adjust the number shown publicly without changing the real download count. Reset returns it to the actual count.
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-full border border-line px-3 py-1 text-xs text-muted">Actual: {actual}</span>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto_auto_auto] sm:items-end">
+                <Field label="Displayed downloads">
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={displayed}
+                    onChange={e => void setDisplayedDownloadCount(currentDoc, Math.max(0, Math.floor(Number(e.target.value) || 0)))}
+                    className="admin-input"
+                  />
+                </Field>
+                <button type="button" onClick={() => void adjustDownloadCount(currentDoc, -1)} disabled={displayed <= 0} className="focus-ring rounded-lg border border-line px-4 py-2 text-xs disabled:opacity-40">−1</button>
+                <button type="button" onClick={() => void adjustDownloadCount(currentDoc, 1)} className="focus-ring rounded-lg border border-line px-4 py-2 text-xs">+1</button>
+                <button type="button" onClick={() => void resetDownloadCount(currentDoc)} disabled={!currentDoc.download_count_adjustment} className="focus-ring rounded-lg border border-line px-4 py-2 text-xs disabled:opacity-40">Reset to actual</button>
+              </div>
+              <p className="mt-2 text-[11px] text-muted">
+                Currently displayed: {displayed}
+                {currentDoc.download_count_adjustment
+                  ? " · Manual adjustment: " + (currentDoc.download_count_adjustment > 0 ? "+" : "") + currentDoc.download_count_adjustment
+                  : ""}
+              </p>
+            </div>
+          );
+        })()}
 
         <div className="rounded-2xl border border-line p-4">
           <div className="flex items-center justify-between gap-3">
@@ -667,7 +720,7 @@ export default function DocumentManager() {
                   <div className="grid gap-3 sm:grid-cols-[1fr_150px_auto]">
                     <input placeholder="A1 / A2 / Full bundle" value={v.label} onChange={e => updateVariant(index, { label: e.target.value })} className="admin-input" />
                     <label className="block">
-                      <span className="mb-1 block text-[11px] text-muted">Level price (USD)</span>
+                      <span className="mb-1 block text-[11px] font-medium text-muted">Custom level price (USD)</span>
                       <input
                         type="number"
                         min="0"
