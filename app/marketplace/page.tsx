@@ -143,7 +143,8 @@ export default function MarketplacePage() {
   }, [documents, query, activeCategory, categoryMap, productTypeMap]);
 
   return (
-    <main className="mx-auto min-h-screen max-w-content px-6 py-12">\n      <MarketplaceAdPopup />
+    <main className="mx-auto min-h-screen max-w-content px-6 py-12">
+      <MarketplaceAdPopup />
       <div className="flex items-center justify-between gap-4">
         <Link href="/" className="focus-ring text-sm text-muted hover:text-ink">
           {t.marketplace.back}
