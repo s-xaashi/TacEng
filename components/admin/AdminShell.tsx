@@ -112,6 +112,13 @@ export default function AdminShell({
                 Documents
               </Link>
               <Link
+                href="/admin/advertising"
+                onClick={() => setOpen(false)}
+                className="focus-ring rounded-md px-2 py-3 text-base text-ink"
+              >
+                Advertising
+              </Link>
+              <Link
                 href="/admin/payments"
                 onClick={() => setOpen(false)}
                 className="focus-ring rounded-md px-2 py-3 text-base text-ink"
