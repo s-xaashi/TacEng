@@ -8,6 +8,7 @@ import BlogManager from "@/components/admin/BlogManager";
 import LearningManager from "@/components/admin/LearningManager";
 import TestimonialsManager from "@/components/admin/TestimonialsManager";
 import SocialLinksManager from "@/components/admin/SocialLinksManager";
+import Link from "next/link";
 
 export default function AdminDashboard() {
   return (
@@ -18,7 +19,7 @@ export default function AdminDashboard() {
         <p className="mt-1 text-sm text-muted">Manage your portfolio and marketplace from one place.</p>
       </div>
 
-      <DocumentManager />
+      <div className="mb-6 flex justify-end"><Link href="/admin/advertising" className="focus-ring rounded-full bg-ink px-5 py-3 text-sm font-medium text-paper">📢 Advertising</Link></div>\n      <DocumentManager />
       <ProjectsManager />
       <PortfolioContentManager />
       <ExperienceManager />
