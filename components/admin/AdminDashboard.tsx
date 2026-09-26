@@ -19,7 +19,8 @@ export default function AdminDashboard() {
         <p className="mt-1 text-sm text-muted">Manage your portfolio and marketplace from one place.</p>
       </div>
 
-      <div className="mb-6 flex justify-end"><Link href="/admin/advertising" className="focus-ring rounded-full bg-ink px-5 py-3 text-sm font-medium text-paper">📢 Advertising</Link></div>\n      <DocumentManager />
+      <div className="mb-6 flex justify-end"><Link href="/admin/advertising" className="focus-ring rounded-full bg-ink px-5 py-3 text-sm font-medium text-paper">📢 Advertising</Link></div>
+      <DocumentManager />
       <ProjectsManager />
       <PortfolioContentManager />
       <ExperienceManager />
