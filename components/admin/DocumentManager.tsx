@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { getThumbnailUrl } from "@/lib/supabase/storage";
 import type { Category, DocumentImage, DocumentReview, DocumentVariant, MarketplaceDocument, ProductType } from "@/lib/supabase/types";
@@ -73,7 +73,7 @@ export default function DocumentManager() {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);\n  const productsCarouselRef = useRef<HTMLDivElement | null>(null);
 
   const load = useCallback(async () => {
     const client = getSupabaseClient();
@@ -819,11 +819,41 @@ export default function DocumentManager() {
           <div><h3 className="font-display text-xl text-ink">Products</h3><p className="text-xs text-muted">{documents.length} total</p></div>
         </div>
         {loading ? <p className="mt-4 text-sm text-muted">Loading…</p> : (
-          <div className="mt-4 grid gap-3">
+          <div className="relative mt-4">
+            {documents.length > 1 && (
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <p className="text-[10px] uppercase tracking-[0.14em] text-muted">
+                  Swipe left/right or use the arrows
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => scrollProducts("left")}
+                    className="focus-ring grid h-9 w-9 place-items-center rounded-full border border-line text-lg text-ink transition-colors hover:border-ink"
+                    aria-label="Previous product"
+                  >
+                    ←
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollProducts("right")}
+                    className="focus-ring grid h-9 w-9 place-items-center rounded-full border border-line text-lg text-ink transition-colors hover:border-ink"
+                    aria-label="Next product"
+                  >
+                    →
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div
+              ref={productsCarouselRef}
+              className="flex gap-4 overflow-x-auto overflow-y-hidden scroll-smooth snap-x snap-mandatory pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
             {documents.map(doc => {
               const docVariants = allImages.filter(i => i.document_id === doc.id);
               return (
-                <div key={doc.id} className="rounded-2xl border border-line p-4">
+                <div key={doc.id} className="w-[88%] shrink-0 snap-center rounded-2xl border border-line p-4 sm:w-[calc(50%-8px)] lg:w-[calc(33.333%-11px)]">
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
                       <h4 className="font-medium text-ink">{doc.title}</h4>
@@ -943,6 +973,7 @@ export default function DocumentManager() {
                 </div>
               );
             })}
+            </div>
           </div>
         )}
       </div>
