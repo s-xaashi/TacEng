@@ -6,6 +6,7 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 import type { Category, MarketplaceDocument, ProductType } from "@/lib/supabase/types";
 import DocumentCard from "@/components/DocumentCard";
 import { useLanguage } from "@/components/LanguageProvider";
+import MarketplaceAdPopup from "@/components/MarketplaceAdPopup";
 
 export default function MarketplacePage() {
   const { locale, setLocale, t } = useLanguage();
@@ -142,7 +143,7 @@ export default function MarketplacePage() {
   }, [documents, query, activeCategory, categoryMap, productTypeMap]);
 
   return (
-    <main className="mx-auto min-h-screen max-w-content px-6 py-12">
+    <main className="mx-auto min-h-screen max-w-content px-6 py-12">\n      <MarketplaceAdPopup />
       <div className="flex items-center justify-between gap-4">
         <Link href="/" className="focus-ring text-sm text-muted hover:text-ink">
           {t.marketplace.back}
