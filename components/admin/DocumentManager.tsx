@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { getThumbnailUrl } from "@/lib/supabase/storage";
-import type { Category, DocumentImage, DocumentVariant, MarketplaceDocument, ProductType } from "@/lib/supabase/types";
+import type { Category, DocumentImage, DocumentReview, DocumentVariant, MarketplaceDocument, ProductType } from "@/lib/supabase/types";
 
 type DraftVariant = {
   id?: string;
@@ -65,6 +65,8 @@ export default function DocumentManager() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [productTypes, setProductTypes] = useState<ProductType[]>([]);
   const [documents, setDocuments] = useState<MarketplaceDocument[]>([]);
+  const [reviews, setReviews] = useState<DocumentReview[]>([]);
+  const [editingReview, setEditingReview] = useState<string | null>(null);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newProductTypeName, setNewProductTypeName] = useState("");
   const [allImages, setAllImages] = useState<DocumentImage[]>([]);
@@ -77,16 +79,18 @@ export default function DocumentManager() {
     const client = getSupabaseClient();
     if (!client) return;
     setLoading(true);
-    const [{ data: cats }, { data: types }, { data: docs }, { data: images }] = await Promise.all([
+    const [{ data: cats }, { data: types }, { data: docs }, { data: images }, { data: reviewRows }] = await Promise.all([
       client.from("categories").select("id, name, slug").order("name"),
       client.from("product_types").select("id, name, slug").order("name"),
       client.from("documents").select("id, title, description, title_en, description_en, title_so, description_so, category_id, file_path, thumbnail_path, price, is_free, payment_link, published, download_enabled, product_type, download_count, download_count_adjustment, created_at, updated_at").order("created_at", { ascending: false }),
       client.from("document_images").select("id, document_id, variant_id, image_path, alt_text, sort_order, created_at").order("sort_order"),
+      client.from("document_reviews").select("*").order("created_at", { ascending: false }),
     ]);
     setCategories(cats ?? []);
     setProductTypes(types ?? []);
     setDocuments(docs ?? []);
     setAllImages(images ?? []);
+    setReviews((reviewRows ?? []) as DocumentReview[]);
     setLoading(false);
   }, []);
 
@@ -492,6 +496,75 @@ export default function DocumentManager() {
     setForm(f => ({ ...f, variants: f.variants.map((v, i) => i === index ? { ...v, ...patch } : v) }));
   }
 
+  async function toggleReview(review: DocumentReview) {
+    const client = getSupabaseClient();
+    if (!client) return;
+    const issue = await requireAdmin(client);
+    if (issue) { setError(issue); return; }
+    const { error: updateError } = await client
+      .from("document_reviews")
+      .update({ approved: !review.approved })
+      .eq("id", review.id);
+    if (updateError) setError(updateError.message);
+    else await load();
+  }
+
+  async function saveReview(review: DocumentReview) {
+    const client = getSupabaseClient();
+    if (!client) return;
+    const issue = await requireAdmin(client);
+    if (issue) { setError(issue); return; }
+
+    const name = review.name.normalize("NFKC").trim().replace(/\s+/g, " ");
+    const comment = review.comment.normalize("NFKC").trim().replace(/\s+/g, " ");
+
+    if (
+      !name ||
+      name.length > 80 ||
+      !comment ||
+      comment.length > 500 ||
+      /[<>]|https?:\/\/|www\.|javascript:|data:|\b[\w-]+\.[a-z]{2,}\b/i.test(name + " " + comment)
+    ) {
+      setError("Review contains invalid text.");
+      return;
+    }
+
+    const { error: updateError } = await client
+      .from("document_reviews")
+      .update({
+        name,
+        comment,
+        rating: Math.min(5, Math.max(1, review.rating)),
+      })
+      .eq("id", review.id);
+
+    if (updateError) setError(updateError.message);
+    else {
+      setEditingReview(null);
+      await load();
+    }
+  }
+
+  async function deleteReview(review: DocumentReview) {
+    if (!window.confirm("Delete this review permanently?")) return;
+    const client = getSupabaseClient();
+    if (!client) return;
+    const issue = await requireAdmin(client);
+    if (issue) { setError(issue); return; }
+
+    const { error: deleteError } = await client
+      .from("document_reviews")
+      .delete()
+      .eq("id", review.id);
+
+    if (deleteError) setError(deleteError.message);
+    else await load();
+  }
+
+  function updateReview(reviewId: string, patch: Partial<DocumentReview>) {
+    setReviews(rs => rs.map(r => r.id === reviewId ? { ...r, ...patch } : r));
+  }
+
   return (
     <section className="mt-10 rounded-3xl border border-line bg-white/10 p-5 sm:p-7">
       <div>
@@ -770,6 +843,103 @@ export default function DocumentManager() {
                     Actual downloads: {doc.download_count} · Displayed: {effectiveDownloadCount(doc)}
                     {doc.download_count_adjustment ? ` · Manual adjustment: ${doc.download_count_adjustment > 0 ? "+" : ""}${doc.download_count_adjustment}` : ""}
                   </p>
+
+                  <div className="mt-4 border-t border-line/70 pt-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">Product reviews</p>
+                        <p className="mt-1 text-xs text-muted">
+                          {reviews.filter(r => r.document_id === doc.id).length} review{reviews.filter(r => r.document_id === doc.id).length === 1 ? "" : "s"}
+                        </p>
+                      </div>
+                      {reviews.filter(r => r.document_id === doc.id).length > 0 && (
+                        <p className="shrink-0 text-[10px] text-muted">Swipe left/right →</p>
+                      )}
+                    </div>
+
+                    {reviews.filter(r => r.document_id === doc.id).length > 0 ? (
+                      <div className="-mx-1 mt-3 flex gap-3 overflow-x-auto px-1 pb-2 snap-x snap-mandatory">
+                        {reviews.filter(r => r.document_id === doc.id).map(review => (
+                          <article
+                            key={review.id}
+                            className="w-[280px] shrink-0 snap-start rounded-xl border border-line/70 p-3"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                {editingReview === review.id ? (
+                                  <input
+                                    value={review.name}
+                                    onChange={e => updateReview(review.id, { name: e.target.value })}
+                                    maxLength={80}
+                                    className="admin-input"
+                                  />
+                                ) : (
+                                  <h5 className="font-medium text-ink">{review.name}</h5>
+                                )}
+                                <p className="mt-1 text-xs text-ink">
+                                  {"★".repeat(review.rating)}
+                                  <span className="text-muted">{"★".repeat(5 - review.rating)}</span>
+                                </p>
+                              </div>
+                              <span className={`shrink-0 rounded-full px-2.5 py-1 text-[9px] ${review.approved ? "bg-pine-light text-pine-dark" : "bg-line text-muted"}`}>
+                                {review.approved ? "Visible" : "Hidden"}
+                              </span>
+                            </div>
+
+                            {editingReview === review.id ? (
+                              <textarea
+                                maxLength={500}
+                                rows={4}
+                                value={review.comment}
+                                onChange={e => updateReview(review.id, { comment: e.target.value })}
+                                className="admin-input mt-3"
+                              />
+                            ) : (
+                              <p className="mt-3 max-h-20 overflow-y-auto text-xs leading-5 text-muted">
+                                {review.comment}
+                              </p>
+                            )}
+
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() => toggleReview(review)}
+                                className="focus-ring rounded-full border border-line px-3 py-1.5 text-[10px]"
+                              >
+                                {review.approved ? "Hide" : "Approve"}
+                              </button>
+                              {editingReview === review.id ? (
+                                <button
+                                  type="button"
+                                  onClick={() => saveReview(review)}
+                                  className="focus-ring rounded-full bg-ink px-3 py-1.5 text-[10px] text-paper"
+                                >
+                                  Save
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingReview(review.id)}
+                                  className="focus-ring rounded-full border border-line px-3 py-1.5 text-[10px]"
+                                >
+                                  Edit
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => deleteReview(review)}
+                                className="focus-ring rounded-full border border-red-200 px-3 py-1.5 text-[10px] text-red-700"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="mt-3 text-xs text-muted">No reviews for this product yet.</p>
+                    )}
+                  </div>
                 </div>
               );
             })}
