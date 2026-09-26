@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { getThumbnailUrl } from "@/lib/supabase/storage";
 import { useLanguage } from "@/components/LanguageProvider";
-import { AdCampaign, AdFormField, localized, localizedList, safeExternalUrl, visitorId } from "@/lib/ads";
+import type { AdCampaign, AdFormField } from "@/lib/ads";
+import { localized, localizedList, safeExternalUrl, visitorId } from "@/lib/ads";
 
 const DISMISS_DAYS = 30;
 const SEEN_DAYS = 1;
@@ -136,7 +137,9 @@ export default function MarketplaceAdPopup() {
     event.preventDefault();
     setSubmitting(true);
     try {
-      const response = await fetch("https://bbksqsgupyytiahmbzmk.supabase.co/functions/v1/submit-ad-lead", {
+      const functionUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/submit-ad-lead` : null;
+      if (!functionUrl) throw new Error("Marketplace is not configured.");
+      const response = await fetch(functionUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
