@@ -1,16 +1,34 @@
 "use client";
 
-import { useAdminAuth } from "@/lib/supabase/useAdminAuth";
+import { useRouter } from "next/navigation";\nimport { useAdminAuth } from "@/lib/supabase/useAdminAuth";
 import AdminShell from "@/components/admin/AdminShell";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 
 export default function AdminPage() {
-  const { state, user, signOut } = useAdminAuth();
+  const { state, user, error, signOut } = useAdminAuth();
 
   if (state === "checking" || state === "signed-out") {
     return (
       <main className="mx-auto min-h-screen max-w-content px-6 py-12">
         <p className="text-sm text-muted">Checking access…</p>
+      </main>
+    );
+  }
+
+  if (state === "error") {
+    return (
+      <main className="mx-auto min-h-screen max-w-content px-6 py-12">
+        <h1 className="font-display text-2xl text-ink">Unable to check access</h1>
+        <p className="mt-3 max-w-md text-sm text-muted">
+          {error ?? "We couldn't verify your admin access. Please sign in again."}
+        </p>
+        <button
+          type="button"
+          onClick={() => router.push("/admin/login")}
+          className="focus-ring mt-6 rounded-full bg-ink px-5 py-2 text-sm font-medium text-paper"
+        >
+          Go to login
+        </button>
       </main>
     );
   }
