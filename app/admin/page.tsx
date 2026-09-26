@@ -1,10 +1,12 @@
 "use client";
 
-import { useRouter } from "next/navigation";\nimport { useAdminAuth } from "@/lib/supabase/useAdminAuth";
+import { useRouter } from "next/navigation";
+import { useAdminAuth } from "@/lib/supabase/useAdminAuth";
 import AdminShell from "@/components/admin/AdminShell";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 
 export default function AdminPage() {
+  const router = useRouter();
   const { state, user, error, signOut } = useAdminAuth();
 
   if (state === "checking" || state === "signed-out") {
