@@ -45,12 +45,18 @@ export default function MarketplaceAdPopup({
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showCloseHint, setShowCloseHint] = useState(true);
 
   const imageUrl = useMemo(() => imageUrlOverride !== undefined ? imageUrlOverride : getThumbnailUrl(campaign?.image_path ?? null), [campaign?.image_path, imageUrlOverride]);
   const couponImageUrl = useMemo(() => couponImageUrlOverride !== undefined ? couponImageUrlOverride : getThumbnailUrl(campaign?.coupon_image_path ?? null), [campaign?.coupon_image_path, couponImageUrlOverride]);
   const title = localized(campaign?.title_en, campaign?.title_so, locale);
   const description = localized(campaign?.description_en, campaign?.description_so, locale);
   const highlights = localizedList(campaign?.highlights_en, campaign?.highlights_so, locale);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setShowCloseHint(false), 3000);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (previewMode || campaignOverride !== undefined) {
@@ -207,9 +213,22 @@ export default function MarketplaceAdPopup({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label={title}>
-      <div className="relative max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-white/15 bg-[#170607] p-5 text-white shadow-2xl sm:p-7">
-        <button type="button" onClick={close} aria-label={locale === "so" ? "Xir" : "Close"} className="focus-ring absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/20 text-lg text-white/80 hover:text-white">×</button>
+      <div className="relative flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-white/15 bg-[#170607] text-white shadow-2xl">
+        <div className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-end border-b border-white/10 bg-[#170607]/95 px-4 backdrop-blur-md sm:px-5">
+          <div className={`pointer-events-none absolute right-16 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-white/15 bg-black/80 px-3 py-1.5 text-[11px] font-medium text-white/90 shadow-lg transition-all duration-500 ${showCloseHint ? "translate-x-0 opacity-100" : "translate-x-2 opacity-0"}`}>
+            {locale === "so" ? "Xidh xayeysiiskan" : "Close this ad"}
+          </div>
+          <button
+            type="button"
+            onClick={close}
+            aria-label={locale === "so" ? "Xidh xayeysiiskan" : "Close this ad"}
+            className="focus-ring flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-black/25 text-xl text-white/80 transition hover:border-white/30 hover:bg-black/40 hover:text-white"
+          >
+            ×
+          </button>
+        </div>
 
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 [scrollbar-width:thin] sm:px-7 sm:py-7">
         {view === "ad" ? (
           <>
             {imageUrl && <img src={imageUrl} alt="" className="mb-5 max-h-72 w-full rounded-2xl object-cover" />}
@@ -279,6 +298,7 @@ export default function MarketplaceAdPopup({
             )}
           </>
         )}
+        </div>
       </div>
     </div>
   );
