@@ -10,7 +10,7 @@ export type AdCampaign = {
   priority: number;
   start_at: string | null;
   end_at: string | null;
-  title_en: string;
+  title_en: string | null;
   title_so: string | null;
   description_en: string | null;
   description_so: string | null;
