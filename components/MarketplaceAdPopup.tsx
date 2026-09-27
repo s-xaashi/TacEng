@@ -240,8 +240,7 @@ export default function MarketplaceAdPopup({
               onClick={(e) => {
                 const url = safeExternalUrl(activeCampaign.redirect_url);
                 if (!url) { e.preventDefault(); return; }
-                const client = getSupabaseClient();
-                if (client) void client.from("ad_events").insert({ campaign_id: activeCampaign.id, event_type: "action", visitor_id: visitorId() });
+                recordEvent("redirect_click");
               }}
               className="focus-ring mt-4 block rounded-full bg-[#e45560] px-5 py-3 text-center text-sm font-semibold text-white"
             >
