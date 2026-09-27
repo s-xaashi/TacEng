@@ -82,16 +82,22 @@ export default function AdvertisingManager() {
 
   const load = useCallback(async () => {
     if (!client) return;
-    const [{ data: cs }, { data: fs }, { data: ss }, { data: es }] = await Promise.all([
+    const results = await Promise.all([
       client.from("ad_campaigns").select("*").order("priority", { ascending: false }).order("created_at", { ascending: false }),
       client.from("ad_form_fields").select("*").order("sort_order"),
       client.from("ad_submissions").select("*").order("submitted_at", { ascending: false }).limit(5000),
       client.from("ad_events").select("*").order("created_at", { ascending: false }).limit(10000),
     ]);
-    setCampaigns((cs ?? []) as AdCampaign[]);
-    setFields((fs ?? []) as AdFormField[]);
-    setSubmissions((ss ?? []) as AdSubmission[]);
-    setEvents((es ?? []) as AdEvent[]);
+    const [campaignResult, fieldResult, submissionResult, eventResult] = results;
+    const firstError = campaignResult.error || fieldResult.error || submissionResult.error || eventResult.error;
+    if (firstError) {
+      console.error("Advertising analytics/data load failed:", firstError);
+      setMessage(firstError.message || "Could not load advertising analytics.");
+    }
+    setCampaigns((campaignResult.data ?? []) as AdCampaign[]);
+    setFields((fieldResult.data ?? []) as AdFormField[]);
+    setSubmissions((submissionResult.data ?? []) as AdSubmission[]);
+    setEvents((eventResult.data ?? []) as AdEvent[]);
   }, [client]);
 
   useEffect(() => { void load(); }, [load]);
