@@ -215,15 +215,15 @@ export default function MarketplaceAdPopup({
     <div className="fixed inset-0 z-[100] h-[100dvh] overflow-hidden bg-black/60 px-4 py-5 backdrop-blur-sm sm:flex sm:items-center sm:justify-center sm:py-6" role="dialog" aria-modal="true" aria-label={title}>
       <div className="relative mx-auto flex h-full max-h-[94dvh] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-white/15 bg-[#170607] text-white shadow-2xl sm:h-auto sm:max-h-[92vh]">
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 [scrollbar-width:thin] [-webkit-overflow-scrolling:touch] sm:px-7 sm:py-7">
-          <div className="sticky top-0 z-30 -mx-5 -mt-5 mb-5 flex h-16 items-center justify-end bg-gradient-to-b from-[#170607] via-[#170607]/95 to-transparent px-4 sm:-mx-7 sm:-mt-7 sm:px-5">
-            <div className={`pointer-events-none absolute right-16 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-white/15 bg-black/80 px-3 py-1.5 text-[11px] font-medium text-white/90 shadow-lg transition-all duration-500 ${showCloseHint ? "translate-x-0 opacity-100" : "translate-x-2 opacity-0"}`}>
+          <div className="sticky top-0 z-30 -mx-5 h-0 pointer-events-none sm:-mx-7">
+            <div className={`pointer-events-none absolute right-12 top-3 whitespace-nowrap rounded-full border border-white/15 bg-black/80 px-3 py-1.5 text-[11px] font-medium text-white/90 shadow-lg transition-all duration-500 ${showCloseHint ? "translate-x-0 opacity-100" : "translate-x-2 opacity-0"}`}>
               {locale === "so" ? "Xidh xayeysiiskan" : "Close this ad"}
             </div>
             <button
               type="button"
               onClick={close}
               aria-label={locale === "so" ? "Xidh xayeysiiskan" : "Close this ad"}
-              className="focus-ring flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-black/40 text-xl text-white/90 shadow-lg backdrop-blur-md transition hover:border-white/30 hover:bg-black/60 hover:text-white"
+              className="focus-ring pointer-events-auto absolute right-0 top-3 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/40 text-xl text-white/90 shadow-lg backdrop-blur-md transition hover:border-white/30 hover:bg-black/60 hover:text-white"
             >
               ×
             </button>
