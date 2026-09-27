@@ -7,26 +7,38 @@ import { useLanguage } from "@/components/LanguageProvider";
 import type { AdCampaign, AdFormField } from "@/lib/ads";
 import { localized, localizedList, safeExternalUrl, visitorId } from "@/lib/ads";
 
-const DISMISS_DAYS = 30;
-const SEEN_DAYS = 1;
+type MarketplaceAdPopupProps = {
+  campaignOverride?: AdCampaign | null;
+  formFieldsOverride?: AdFormField[];
+  previewMode?: boolean;
+  onClose?: () => void;
+  imageUrlOverride?: string | null;
+  couponImageUrlOverride?: string | null;
+};
 
-function remember(key: string, days: number) {
-  window.localStorage.setItem(key, String(Date.now() + days * 86400000));
+function impressionKey(id: string) {
+  return "marketplace_ad_impressions_" + id;
 }
-function remembered(key: string) {
-  const value = Number(window.localStorage.getItem(key) || 0);
-  if (!value) return false;
-  if (value < Date.now()) {
-    window.localStorage.removeItem(key);
-    return false;
-  }
-  return true;
+function getImpressionCount(id: string) {
+  return Number(window.localStorage.getItem(impressionKey(id)) || 0);
+}
+function incrementImpressionCount(id: string) {
+  const next = getImpressionCount(id) + 1;
+  window.localStorage.setItem(impressionKey(id), String(next));
+  return next;
 }
 
-export default function MarketplaceAdPopup() {
+export default function MarketplaceAdPopup({
+  campaignOverride,
+  formFieldsOverride,
+  previewMode = false,
+  onClose,
+  imageUrlOverride,
+  couponImageUrlOverride,
+}: MarketplaceAdPopupProps) {
   const { locale } = useLanguage();
-  const [campaign, setCampaign] = useState<AdCampaign | null>(null);
-  const [formFields, setFormFields] = useState<AdFormField[]>([]);
+  const [campaign, setCampaign] = useState<AdCampaign | null>(campaignOverride ?? null);
+  const [formFields, setFormFields] = useState<AdFormField[]>(formFieldsOverride ?? []);
   const [view, setView] = useState<"ad" | "action">("ad");
   const [formData, setFormData] = useState<Record<string, unknown>>({});
   const [loadingForm, setLoadingForm] = useState(false);
@@ -34,13 +46,22 @@ export default function MarketplaceAdPopup() {
   const [submitted, setSubmitted] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const imageUrl = useMemo(() => getThumbnailUrl(campaign?.image_path ?? null), [campaign?.image_path]);
-  const couponImageUrl = useMemo(() => getThumbnailUrl(campaign?.coupon_image_path ?? null), [campaign?.coupon_image_path]);
+  const imageUrl = useMemo(() => imageUrlOverride !== undefined ? imageUrlOverride : getThumbnailUrl(campaign?.image_path ?? null), [campaign?.image_path, imageUrlOverride]);
+  const couponImageUrl = useMemo(() => couponImageUrlOverride !== undefined ? couponImageUrlOverride : getThumbnailUrl(campaign?.coupon_image_path ?? null), [campaign?.coupon_image_path, couponImageUrlOverride]);
   const title = localized(campaign?.title_en, campaign?.title_so, locale);
   const description = localized(campaign?.description_en, campaign?.description_so, locale);
   const highlights = localizedList(campaign?.highlights_en, campaign?.highlights_so, locale);
 
   useEffect(() => {
+    if (previewMode || campaignOverride !== undefined) {
+      setCampaign(campaignOverride ?? null);
+      setFormFields(formFieldsOverride ?? []);
+      setView("ad");
+      setSubmitted(false);
+      setFormData({});
+      return;
+    }
+
     let cancelled = false;
     const client = getSupabaseClient();
     if (!client) return;
@@ -56,36 +77,46 @@ export default function MarketplaceAdPopup() {
         .limit(10);
 
       if (cancelled) return;
+      const id = visitorId();
       const now = Date.now();
       const eligible = ((data ?? []) as AdCampaign[]).find((item) => {
         const startOk = !item.start_at || new Date(item.start_at).getTime() <= now;
         const endOk = !item.end_at || new Date(item.end_at).getTime() >= now;
-        return startOk && endOk && !remembered("marketplace_ad_dismissed_" + item.id) && !remembered("marketplace_ad_seen_" + item.id);
+        const cap = Number(item.max_impressions_per_visitor ?? 1);
+        const impressions = getImpressionCount(item.id);
+        return startOk && endOk && (cap <= 0 || impressions < cap);
       });
 
       if (eligible) {
         setCampaign(eligible);
-        remember("marketplace_ad_seen_" + eligible.id, SEEN_DAYS);
-        const id = visitorId();
+        incrementImpressionCount(eligible.id);
         void supabase.from("ad_events").insert({ campaign_id: eligible.id, event_type: "impression", visitor_id: id });
       }
     }
 
-    load();
+    void load();
     return () => { cancelled = true; };
-  }, []);
+  }, [campaignOverride, formFieldsOverride, previewMode]);
 
   if (!campaign) return null;
   const activeCampaign = campaign;
 
   function close() {
-    remember("marketplace_ad_dismissed_" + activeCampaign.id, DISMISS_DAYS);
+    if (previewMode) {
+      onClose?.();
+      return;
+    }
     setCampaign(null);
   }
 
-  async function interested() {
+  function recordEvent(eventType: "interested" | "not_interested" | "action" | "redirect_click" | "coupon_copy") {
+    if (previewMode) return;
     const client = getSupabaseClient();
-    if (client) void client.from("ad_events").insert({ campaign_id: activeCampaign.id, event_type: "interested", visitor_id: visitorId() });
+    if (client) void client.from("ad_events").insert({ campaign_id: activeCampaign.id, event_type: eventType, visitor_id: visitorId() });
+  }
+
+  async function interested() {
+    recordEvent("interested");
 
     if (activeCampaign.ad_type === "announcement") {
       close();
@@ -94,6 +125,10 @@ export default function MarketplaceAdPopup() {
 
     if (activeCampaign.ad_type === "form") {
       setView("action");
+      if (formFieldsOverride) {
+        setFormFields(formFieldsOverride);
+        return;
+      }
       const client = getSupabaseClient();
       if (!client) return;
       setLoadingForm(true);
@@ -114,15 +149,14 @@ export default function MarketplaceAdPopup() {
 
     const url = safeExternalUrl(activeCampaign.redirect_url);
     if (url) {
-      if (client) void client.from("ad_events").insert({ campaign_id: activeCampaign.id, event_type: "action", visitor_id: visitorId() });
+      recordEvent("redirect_click");
       window.open(url, "_blank", "noopener,noreferrer");
       close();
     }
   }
 
   function notInterested() {
-    const client = getSupabaseClient();
-    if (client) void client.from("ad_events").insert({ campaign_id: activeCampaign.id, event_type: "not_interested", visitor_id: visitorId() });
+    recordEvent("not_interested");
     close();
   }
 
@@ -130,8 +164,7 @@ export default function MarketplaceAdPopup() {
     if (!activeCampaign.coupon_code) return;
     await navigator.clipboard.writeText(activeCampaign.coupon_code);
     setCopied(true);
-    const client = getSupabaseClient();
-    if (client) void client.from("ad_events").insert({ campaign_id: activeCampaign.id, event_type: "coupon_copy", visitor_id: visitorId() });
+    recordEvent("coupon_copy");
     window.setTimeout(() => setCopied(false), 1800);
   }
 
@@ -139,6 +172,11 @@ export default function MarketplaceAdPopup() {
     event.preventDefault();
     setSubmitting(true);
     try {
+      if (previewMode) {
+        await new Promise((resolve) => window.setTimeout(resolve, 350));
+        setSubmitted(true);
+        return;
+      }
       const functionUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/submit-ad-lead` : null;
       if (!functionUrl) throw new Error("Marketplace is not configured.");
       const response = await fetch(functionUrl, {
