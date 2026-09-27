@@ -86,13 +86,31 @@ export default function MarketplaceAdPopup({
       if (cancelled) return;
       const id = visitorId();
       const now = Date.now();
-      const eligible = ((data ?? []) as AdCampaign[]).find((item) => {
+      const eligibleAds = ((data ?? []) as AdCampaign[]).filter((item) => {
         const startOk = !item.start_at || new Date(item.start_at).getTime() <= now;
         const endOk = !item.end_at || new Date(item.end_at).getTime() >= now;
         const cap = Number(item.max_impressions_per_visitor ?? 1);
         const impressions = getImpressionCount(item.id);
         return startOk && endOk && (cap <= 0 || impressions < cap);
       });
+
+      // Balanced rotation: distribute exposure according to priority weight.
+      // A campaign with priority 10 gets roughly twice the exposure of priority 5,
+      // while every eligible campaign still gets a turn. We use the local
+      // impression counts so the same browser/device does not keep seeing one
+      // campaign when several are available.
+      const eligible = eligibleAds
+        .sort((a, b) => {
+          const aCount = getImpressionCount(a.id);
+          const bCount = getImpressionCount(b.id);
+          const aWeight = Math.max(1, Number(a.priority ?? 0));
+          const bWeight = Math.max(1, Number(b.priority ?? 0));
+          const aScore = aCount / aWeight;
+          const bScore = bCount / bWeight;
+          if (aScore !== bScore) return aScore - bScore;
+          if (a.priority !== b.priority) return Number(b.priority ?? 0) - Number(a.priority ?? 0);
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        })[0];
 
       if (eligible) {
         setCampaign(eligible);
