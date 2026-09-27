@@ -5,6 +5,7 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 import { getThumbnailUrl } from "@/lib/supabase/storage";
 import type { AdCampaign, AdEvent, AdFormField, AdSubmission, AdType, AdActionType } from "@/lib/ads";
 import { csvCell } from "@/lib/ads";
+import MarketplaceAdPopup from "@/components/MarketplaceAdPopup";
 
 const emptyCampaign: Partial<AdCampaign> = {
   name: "",
@@ -412,16 +413,12 @@ export default function AdvertisingManager() {
       )}
 
       {preview && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true">
-          <div className="relative max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-white/15 bg-[#170607] p-5 text-white shadow-2xl">
-            <button type="button" onClick={()=>setPreview(false)} className="focus-ring absolute right-4 top-4 h-9 w-9 rounded-full border border-white/15">×</button>
-            <p className="text-[10px] uppercase tracking-[.22em] text-[#d8e06b]">Live preview</p>
-            <h2 className="mt-2 font-display text-3xl">{String(previewCampaign.title_en ?? "Advertisement")}</h2>
-            {previewCampaign.description_en && <p className="mt-3 text-sm leading-6 text-white/65">{String(previewCampaign.description_en)}</p>}
-            {previewCampaign.image_path && <img src={getThumbnailUrl(previewCampaign.image_path) ?? ""} alt="" className="mt-5 max-h-64 w-full rounded-2xl object-cover" />}
-            <div className="mt-6 flex gap-3"><button className="rounded-full bg-[#e45560] px-5 py-3 text-sm font-semibold">I&apos;m Interested</button><button className="rounded-full border border-white/15 px-5 py-3 text-sm">Not interested</button></div>
-          </div>
-        </div>
+        <MarketplaceAdPopup
+          campaignOverride={previewCampaign}
+          formFieldsOverride={formFields}
+          previewMode
+          onClose={() => setPreview(false)}
+        />
       )}
     </main>
   );
