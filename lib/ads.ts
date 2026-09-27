@@ -29,6 +29,7 @@ export type AdCampaign = {
   coupon_highlights_en: string[];
   coupon_highlights_so: string[];
   coupon_image_path: string | null;
+  max_impressions_per_visitor: number;
   created_at: string;
   updated_at: string;
 };
@@ -60,7 +61,7 @@ export type AdSubmission = {
 export type AdEvent = {
   id: number;
   campaign_id: string;
-  event_type: "impression" | "interested" | "not_interested" | "action" | "coupon_copy" | "form_submit";
+  event_type: "impression" | "interested" | "not_interested" | "action" | "redirect_click" | "coupon_copy" | "form_submit";
   visitor_id: string | null;
   created_at: string;
 };
