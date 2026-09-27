@@ -223,8 +223,8 @@ export default function MarketplaceAdPopup({
 
   return (
     <div className="fixed inset-0 z-[100] h-[100dvh] overflow-hidden bg-black/60 px-4 py-5 backdrop-blur-sm sm:flex sm:items-center sm:justify-center sm:py-6" role="dialog" aria-modal="true" aria-label={title}>
-      <div className="relative mx-auto flex h-full max-h-[94dvh] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-white/15 bg-[#170607] text-white shadow-2xl sm:h-auto sm:max-h-[92vh]">
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 [scrollbar-width:thin] [-webkit-overflow-scrolling:touch] sm:px-7 sm:py-7">
+      <div className="relative mx-auto flex h-auto max-h-[94dvh] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-white/15 bg-[#170607] text-white shadow-2xl sm:max-h-[92vh]">
+        <div className="min-h-0 max-h-[94dvh] overflow-y-auto overscroll-contain px-5 py-5 [scrollbar-width:thin] [-webkit-overflow-scrolling:touch] sm:max-h-[92vh] sm:px-7 sm:py-7">
           <div className="sticky top-0 z-30 -mx-5 h-0 pointer-events-none sm:-mx-7">
             <div className={`pointer-events-none absolute right-12 top-3 whitespace-nowrap rounded-full border border-white/15 bg-black/80 px-3 py-1.5 text-[11px] font-medium text-white/90 shadow-lg transition-all duration-500 ${showCloseHint ? "translate-x-0 opacity-100" : "translate-x-2 opacity-0"}`}>
               {locale === "so" ? "Xidh xayeysiiskan" : "Close this ad"}
