@@ -32,6 +32,7 @@ const emptyCampaign: Partial<AdCampaign> = {
   coupon_highlights_en: [],
   coupon_highlights_so: [],
   coupon_image_path: null,
+  max_impressions_per_visitor: 1,
 };
 
 const emptyField: AdFormField = {
@@ -170,6 +171,7 @@ export default function AdvertisingManager() {
         coupon_highlights_en: lines(String(form.coupon_highlights_en ?? "")),
         coupon_highlights_so: lines(String(form.coupon_highlights_so ?? "")),
         coupon_image_path: couponImagePath,
+        max_impressions_per_visitor: Math.max(0, Math.min(100, Number(form.max_impressions_per_visitor) || 0)),
       };
 
       let campaignId = editing;
@@ -246,6 +248,10 @@ export default function AdvertisingManager() {
     return campaignEvents(id).filter((event) => event.event_type === type).length;
   }
 
+  function uniqueCount(id: string, type: AdEvent["event_type"]) {
+    return new Set(campaignEvents(id).filter((event) => event.event_type === type).map((event) => event.visitor_id).filter(Boolean)).size;
+  }
+
   function downloadCsv() {
     const rows = submissions.filter((s) => leadCampaign === "all" || s.campaign_id === leadCampaign);
     const campaign = (id: string) => campaigns.find((c) => c.id === id)?.name ?? id;
@@ -306,6 +312,7 @@ export default function AdvertisingManager() {
               <label><span className="admin-label">Type</span><select value={String(form.ad_type ?? "announcement")} onChange={(e)=>setForm(f=>({...f,ad_type:e.target.value as AdType,action_type:e.target.value==="action"?"coupon":null}))} className="admin-input"><option value="announcement">Announcement</option><option value="action">Action</option><option value="form">Lead Form</option></select></label>
               <label><span className="admin-label">Status</span><select value={String(form.status ?? "draft")} onChange={(e)=>setForm(f=>({...f,status:e.target.value as AdCampaign["status"]}))} className="admin-input"><option value="draft">Draft</option><option value="active">Active</option><option value="paused">Paused</option><option value="archived">Archived</option></select></label>
               <label><span className="admin-label">Priority</span><input type="number" min={-1000} max={1000} value={Number(form.priority ?? 0)} onChange={(e)=>setForm(f=>({...f,priority:Number(e.target.value)}))} className="admin-input"/></label>
+              <label><span className="admin-label">Maximum times shown per visitor</span><input type="number" min={0} max={100} value={Number(form.max_impressions_per_visitor ?? 1)} onChange={(e)=>setForm(f=>({...f,max_impressions_per_visitor:Math.max(0,Math.min(100,Number(e.target.value)||0))}))} className="admin-input"/><span className="mt-1 block text-[11px] text-muted">0 = unlimited. A visitor is identified by this browser/device.</span></label>
               <label><span className="admin-label">Start</span><input type="datetime-local" value={toInputDate(form.start_at)} onChange={(e)=>setForm(f=>({...f,start_at:e.target.value}))} className="admin-input"/></label>
               <label><span className="admin-label">End</span><input type="datetime-local" value={toInputDate(form.end_at)} onChange={(e)=>setForm(f=>({...f,end_at:e.target.value}))} className="admin-input"/></label>
 
@@ -397,8 +404,8 @@ export default function AdvertisingManager() {
       {tab === "analytics" && (
         <section className="mt-6 grid gap-4 lg:grid-cols-2">
           {campaigns.map(campaign => {
-            const impressions=count(campaign.id,"impression"), interested=count(campaign.id,"interested"), notInterested=count(campaign.id,"not_interested"), actions=count(campaign.id,"action"), copies=count(campaign.id,"coupon_copy"), leads=count(campaign.id,"form_submit");
-            return <article key={campaign.id} className="rounded-3xl border border-line p-6"><p className="text-xs uppercase tracking-[.18em] text-muted">{campaign.ad_type}</p><h2 className="mt-1 font-display text-2xl">{campaign.title_en}</h2><div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">{[["Views",impressions],["Interested",interested],["Not interested",notInterested],["Actions",actions],["Coupon copies",copies],["Form submissions",leads]].map(([label,value])=><div key={String(label)} className="rounded-2xl border border-line p-4"><p className="text-xs text-muted">{label}</p><p className="mt-1 text-2xl font-semibold">{value}</p></div>)}</div></article>;
+            const impressions=count(campaign.id,"impression"), viewers=uniqueCount(campaign.id,"impression"), interested=uniqueCount(campaign.id,"interested"), notInterested=uniqueCount(campaign.id,"not_interested"), actions=uniqueCount(campaign.id,"action"), redirects=uniqueCount(campaign.id,"redirect_click"), copies=uniqueCount(campaign.id,"coupon_copy"), leads=uniqueCount(campaign.id,"form_submit");
+            return <article key={campaign.id} className="rounded-3xl border border-line p-6"><div className="flex items-start justify-between gap-3"><div><p className="text-xs uppercase tracking-[.18em] text-muted">{campaign.ad_type}</p><h2 className="mt-1 font-display text-2xl">{campaign.title_en}</h2></div><span className="rounded-full border border-line px-2 py-1 text-xs">Cap: {campaign.max_impressions_per_visitor === 0 ? "Unlimited" : campaign.max_impressions_per_visitor}</span></div><div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">{[["Views",impressions],["People viewed",viewers],["Interested",interested],["Not interested",notInterested],["Coupon copies",copies],["Form submissions",leads],["Redirect clicks",redirects],["Other actions",actions]].map(([label,value])=><div key={String(label)} className="rounded-2xl border border-line p-4"><p className="text-xs text-muted">{label}</p><p className="mt-1 text-2xl font-semibold">{value}</p></div>)}</div></article>;
           })}
           {campaigns.length===0 && <p className="rounded-2xl border border-dashed border-line p-8 text-center text-sm text-muted lg:col-span-2">Analytics will appear after you publish campaigns.</p>}
         </section>
