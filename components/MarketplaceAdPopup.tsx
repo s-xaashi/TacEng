@@ -96,7 +96,11 @@ export default function MarketplaceAdPopup({
       if (eligible) {
         setCampaign(eligible);
         incrementImpressionCount(eligible.id);
-        void supabase.from("ad_events").insert({ campaign_id: eligible.id, event_type: "impression", visitor_id: id });
+        void supabase.from("ad_events")
+          .insert({ campaign_id: eligible.id, event_type: "impression", visitor_id: id })
+          .then(({ error }) => {
+            if (error) console.error("Advertising impression recording failed:", error);
+          });
       }
     }
 
@@ -118,7 +122,12 @@ export default function MarketplaceAdPopup({
   function recordEvent(eventType: "interested" | "not_interested" | "action" | "redirect_click" | "coupon_copy") {
     if (previewMode) return;
     const client = getSupabaseClient();
-    if (client) void client.from("ad_events").insert({ campaign_id: activeCampaign.id, event_type: eventType, visitor_id: visitorId() });
+    if (!client) return;
+    void client.from("ad_events")
+      .insert({ campaign_id: activeCampaign.id, event_type: eventType, visitor_id: visitorId() })
+      .then(({ error }) => {
+        if (error) console.error("Advertising event recording failed:", error);
+      });
   }
 
   async function interested() {
