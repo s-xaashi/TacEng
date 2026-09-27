@@ -212,23 +212,22 @@ export default function MarketplaceAdPopup({
   const actionCta = localized(activeCampaign.cta_en, activeCampaign.cta_so, locale) || (locale === "so" ? "Waan xiiseynayaa" : "I'm Interested");
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label={title}>
-      <div className="relative flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-white/15 bg-[#170607] text-white shadow-2xl">
-        <div className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-end border-b border-white/10 bg-[#170607]/95 px-4 backdrop-blur-md sm:px-5">
-          <div className={`pointer-events-none absolute right-16 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-white/15 bg-black/80 px-3 py-1.5 text-[11px] font-medium text-white/90 shadow-lg transition-all duration-500 ${showCloseHint ? "translate-x-0 opacity-100" : "translate-x-2 opacity-0"}`}>
-            {locale === "so" ? "Xidh xayeysiiskan" : "Close this ad"}
+    <div className="fixed inset-0 z-[100] h-[100dvh] overflow-hidden bg-black/60 px-4 py-5 backdrop-blur-sm sm:flex sm:items-center sm:justify-center sm:py-6" role="dialog" aria-modal="true" aria-label={title}>
+      <div className="relative mx-auto flex h-full max-h-[94dvh] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-white/15 bg-[#170607] text-white shadow-2xl sm:h-auto sm:max-h-[92vh]">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 [scrollbar-width:thin] [-webkit-overflow-scrolling:touch] sm:px-7 sm:py-7">
+          <div className="sticky top-0 z-30 -mx-5 -mt-5 mb-5 flex h-16 items-center justify-end bg-gradient-to-b from-[#170607] via-[#170607]/95 to-transparent px-4 sm:-mx-7 sm:-mt-7 sm:px-5">
+            <div className={`pointer-events-none absolute right-16 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-white/15 bg-black/80 px-3 py-1.5 text-[11px] font-medium text-white/90 shadow-lg transition-all duration-500 ${showCloseHint ? "translate-x-0 opacity-100" : "translate-x-2 opacity-0"}`}>
+              {locale === "so" ? "Xidh xayeysiiskan" : "Close this ad"}
+            </div>
+            <button
+              type="button"
+              onClick={close}
+              aria-label={locale === "so" ? "Xidh xayeysiiskan" : "Close this ad"}
+              className="focus-ring flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-black/40 text-xl text-white/90 shadow-lg backdrop-blur-md transition hover:border-white/30 hover:bg-black/60 hover:text-white"
+            >
+              ×
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={close}
-            aria-label={locale === "so" ? "Xidh xayeysiiskan" : "Close this ad"}
-            className="focus-ring flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-black/25 text-xl text-white/80 transition hover:border-white/30 hover:bg-black/40 hover:text-white"
-          >
-            ×
-          </button>
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 [scrollbar-width:thin] sm:px-7 sm:py-7">
         {view === "ad" ? (
           <>
             {imageUrl && <img src={imageUrl} alt="" className="mb-5 max-h-72 w-full rounded-2xl object-cover" />}
