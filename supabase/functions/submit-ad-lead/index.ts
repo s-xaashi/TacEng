@@ -8,8 +8,14 @@ const allowedOrigins = new Set([
   "http://127.0.0.1:3000",
 ]);
 
+function isAllowedOrigin(origin: string | null) {
+  if (!origin) return false;
+  if (allowedOrigins.has(origin)) return true;
+  return /^https:\/\/salmaan-portfolio-[a-z0-9-]+-salmaanmukhtaar646-4898s-projects\.vercel\.app$/i.test(origin);
+}
+
 function corsHeaders(origin: string | null) {
-  const allowOrigin = origin && allowedOrigins.has(origin) ? origin : "https://salmaan.de5.net";
+  const allowOrigin = isAllowedOrigin(origin) ? origin! : "https://salmaan.de5.net";
   return {
     "Access-Control-Allow-Origin": allowOrigin,
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
