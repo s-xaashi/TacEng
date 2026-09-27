@@ -94,23 +94,25 @@ export default function MarketplaceAdPopup({
         return startOk && endOk && (cap <= 0 || impressions < cap);
       });
 
-      // Balanced rotation: distribute exposure according to priority weight.
-      // A campaign with priority 10 gets roughly twice the exposure of priority 5,
-      // while every eligible campaign still gets a turn. We use the local
-      // impression counts so the same browser/device does not keep seeing one
-      // campaign when several are available.
-      const eligible = eligibleAds
-        .sort((a, b) => {
-          const aCount = getImpressionCount(a.id);
-          const bCount = getImpressionCount(b.id);
-          const aWeight = Math.max(1, Number(a.priority ?? 0));
-          const bWeight = Math.max(1, Number(b.priority ?? 0));
-          const aScore = aCount / aWeight;
-          const bScore = bCount / bWeight;
-          if (aScore !== bScore) return aScore - bScore;
-          if (a.priority !== b.priority) return Number(b.priority ?? 0) - Number(a.priority ?? 0);
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        })[0];
+      // Round-robin rotation: every eligible campaign gets the next turn.
+      // Priority determines the base order, but it does not allow one campaign
+      // to dominate repeated visits. The cursor is stored per browser/device so
+      // a new marketplace visit advances to the next eligible campaign.
+      const rotationKey = "marketplace_ad_rotation_cursor";
+      const orderedAds = [...eligibleAds].sort((a, b) => {
+        if (a.priority !== b.priority) return Number(b.priority ?? 0) - Number(a.priority ?? 0);
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+      const cursor = Number(window.localStorage.getItem(rotationKey) || 0);
+      const start = Number.isFinite(cursor) && orderedAds.length ? cursor % orderedAds.length : 0;
+      const eligible = orderedAds.length
+        ? orderedAds[start]
+        : null;
+
+      if (eligible) {
+        const nextIndex = orderedAds.length > 1 ? (start + 1) % orderedAds.length : 0;
+        window.localStorage.setItem(rotationKey, String(nextIndex));
+      }
 
       if (eligible) {
         setCampaign(eligible);
