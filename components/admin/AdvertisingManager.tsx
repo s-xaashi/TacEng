@@ -147,7 +147,27 @@ export default function AdvertisingManager() {
         throw new Error("Coupon code and redirect URL are required.");
       }
       if (form.action_type === "redirect" && !String(form.redirect_url ?? "").trim()) throw new Error("Redirect URL is required.");
-      if (form.ad_type === "form" && formFields.length === 0) throw new Error("Add at least one form field.");
+      if (form.ad_type === "form") {
+        if (formFields.length === 0) throw new Error("Add at least one form field.");
+        formFields.forEach((field, index) => {
+          const key = field.field_key.trim().toLowerCase();
+          if (!/^[a-z][a-z0-9_]{0,39}$/.test(key)) {
+            throw new Error(`Form field ${index + 1}: use a key starting with a letter (a-z), followed by letters, numbers, or underscores.`);
+          }
+          if (!field.label_en.trim()) {
+            throw new Error(`Form field ${index + 1}: English label is required.`);
+          }
+          if (field.label_en.trim().length > 120) {
+            throw new Error(`Form field ${index + 1}: English label must be 120 characters or fewer.`);
+          }
+          if (field.placeholder_en.trim().length > 160 || field.placeholder_so.trim().length > 160) {
+            throw new Error(`Form field ${index + 1}: placeholder must be 160 characters or fewer.`);
+          }
+          if (field.field_type === "select" && field.options_en.map(x => x.trim()).filter(Boolean).length === 0) {
+            throw new Error(`Form field ${index + 1}: add at least one English option for a Select field.`);
+          }
+        });
+      }
 
       let imagePath = form.image_path ?? null;
       let couponImagePath = form.coupon_image_path ?? null;
@@ -216,7 +236,11 @@ export default function AdvertisingManager() {
       reset();
       await load();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Save failed.");
+      const details = error && typeof error === "object"
+        ? ("message" in error ? String((error as { message?: unknown }).message) : "")
+        : "";
+      console.error("Advertising campaign save failed:", error);
+      setMessage(details || (error instanceof Error ? error.message : "Save failed. Check the browser console for details."));
     } finally {
       setSaving(false);
     }
