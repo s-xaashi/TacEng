@@ -274,11 +274,10 @@ export default function AdvertisingManager() {
     URL.revokeObjectURL(url);
   }
 
-  const selectedCampaign = editing ? campaigns.find((c) => c.id === editing) : null;
-  const previewCampaign = selectedCampaign ?? ({
+  const previewCampaign = ({
     ...emptyCampaign,
     ...form,
-    id: "preview",
+    id: editing ?? "preview",
     created_at: "",
     updated_at: "",
   } as AdCampaign);
