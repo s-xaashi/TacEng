@@ -52,6 +52,7 @@ export default function MarketplaceAdPopup({
   const title = localized(campaign?.title_en, campaign?.title_so, locale);
   const description = localized(campaign?.description_en, campaign?.description_so, locale);
   const highlights = localizedList(campaign?.highlights_en, campaign?.highlights_so, locale);
+  const imageOnly = Boolean(campaign?.image_path) && !title && !description && highlights.length === 0 && !campaign?.action_type && formFields.length === 0;
 
   useEffect(() => {
     const timer = window.setTimeout(() => setShowCloseHint(false), 3000);
@@ -239,19 +240,27 @@ export default function MarketplaceAdPopup({
           </div>
         {view === "ad" ? (
           <>
-            {imageUrl && <img src={imageUrl} alt="" className="mb-5 max-h-72 w-full rounded-2xl object-cover" />}
-            <p className="text-[10px] uppercase tracking-[.22em] text-[#d8e06b]">Featured</p>
-            <h2 className="mt-2 font-display text-3xl">{title}</h2>
+            {imageUrl && <img src={imageUrl} alt={title || ""} className="mb-5 h-auto w-full rounded-2xl object-contain" />}
+            {!imageOnly && <p className="text-[10px] uppercase tracking-[.22em] text-[#d8e06b]">Featured</p>}
+            {title && <h2 className="mt-2 font-display text-3xl">{title}</h2>}
             {description && <p className="mt-3 whitespace-pre-line text-sm leading-6 text-white/65">{description}</p>}
             {highlights.length > 0 && <ul className="mt-4 space-y-2 text-sm text-white/75">{highlights.map((item, i) => <li key={i}>• {item}</li>)}</ul>}
-            <div className="mt-7 grid gap-3 sm:grid-cols-2">
-              <button type="button" onClick={interested} className="focus-ring rounded-full bg-[#e45560] px-5 py-3 text-sm font-semibold text-white">{actionCta}</button>
-              <button type="button" onClick={notInterested} className="focus-ring rounded-full border border-white/15 px-5 py-3 text-sm text-white/70 hover:text-white">{locale === "so" ? "Ma xiiseynayo" : "Not interested"}</button>
+            <div className="mt-7">
+              {activeCampaign.ad_type === "announcement" || imageOnly ? (
+                <button type="button" onClick={close} className="focus-ring w-full rounded-full bg-[#e45560] px-5 py-3 text-sm font-semibold text-white">
+                  {locale === "so" ? "Iska xidh" : "Close"}
+                </button>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <button type="button" onClick={interested} className="focus-ring rounded-full bg-[#e45560] px-5 py-3 text-sm font-semibold text-white">{actionCta}</button>
+                  <button type="button" onClick={notInterested} className="focus-ring rounded-full border border-white/15 px-5 py-3 text-sm text-white/70 hover:text-white">{locale === "so" ? "Ma xiiseynayo" : "Not interested"}</button>
+                </div>
+              )}
             </div>
           </>
         ) : activeCampaign.ad_type === "action" && activeCampaign.action_type === "coupon" ? (
           <>
-            {couponImageUrl && <img src={couponImageUrl} alt="" className="mb-5 max-h-64 w-full rounded-2xl object-cover" />}
+            {couponImageUrl && <img src={couponImageUrl} alt={actionTitle || title || ""} className="mb-5 h-auto w-full rounded-2xl object-contain" />}
             <p className="text-[10px] uppercase tracking-[.22em] text-[#d8e06b]">{locale === "so" ? "Coupon" : "Coupon"}</p>
             <h2 className="mt-2 font-display text-2xl">{actionTitle || title}</h2>
             {actionDescription && <p className="mt-3 whitespace-pre-line text-sm leading-6 text-white/65">{actionDescription}</p>}
