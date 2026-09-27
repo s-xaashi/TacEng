@@ -118,3 +118,10 @@ a{transition:color .25s ease,background-color .25s ease,border-color .25s ease,t
 @keyframes social-float{0%,100%{translate:0 0}50%{translate:0 -3px}}
 @media(max-width:767px){.social-links-wrap{align-items:flex-start;flex-direction:column;gap:13px}.social-links{gap:9px}.social-link{width:43px;height:43px;border-radius:14px}.social-link svg{width:19px;height:19px}}
 @media(prefers-reduced-motion:reduce){.social-link{animation:none}}
+/* Advertising admin forms: keep controls inside their grid/card on narrow viewports. */
+.admin-content-card{min-width:0;overflow:hidden}
+.admin-content-card label{min-width:0}
+.admin-content-card .grid > label{min-width:0;max-width:100%}
+.admin-input{box-sizing:border-box;display:block;min-width:0;max-width:100%;width:100%}
+.admin-content-card textarea{box-sizing:border-box;min-width:0;max-width:100%;width:100%;overflow-wrap:anywhere}
+.admin-content-card input,.admin-content-card select,.admin-content-card textarea{font-size:16px}

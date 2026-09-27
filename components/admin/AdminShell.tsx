@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/admin" },
+  { label: "Advertising", href: "/admin/advertising" },
   { label: "Payments / Purchases", href: "/admin/payments" },
   { label: "Account Settings", href: "/admin/account" },
 ];
@@ -109,6 +110,13 @@ export default function AdminShell({
                 className="focus-ring rounded-md px-2 py-3 text-base text-ink"
               >
                 Documents
+              </Link>
+              <Link
+                href="/admin/advertising"
+                onClick={() => setOpen(false)}
+                className="focus-ring rounded-md px-2 py-3 text-base text-ink"
+              >
+                Advertising
               </Link>
               <Link
                 href="/admin/payments"
