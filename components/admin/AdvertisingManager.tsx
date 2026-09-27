@@ -139,8 +139,10 @@ export default function AdvertisingManager() {
     try {
       const titleEn = String(form.title_en ?? "").trim();
       const name = String(form.name ?? "").trim();
-      if (!name || !titleEn) throw new Error("Campaign name and English title are required.");
-      if (form.ad_type === "action" && !form.action_type) throw new Error("Choose an action type.");
+      const hasImage = Boolean(form.image_path || imageFile);
+      if (!name) throw new Error("Campaign name is required.");
+      if (!titleEn && !hasImage) throw new Error("Add an English title or an advertisement image.");
+      if (form.ad_type === "action" && !form.action_type && !hasImage) throw new Error("Choose an action type or add an advertisement image.");
       if (form.action_type === "coupon" && (!String(form.coupon_code ?? "").trim() || !String(form.redirect_url ?? "").trim())) {
         throw new Error("Coupon code and redirect URL are required.");
       }
@@ -159,7 +161,7 @@ export default function AdvertisingManager() {
         priority: Math.max(-1000, Math.min(1000, Number(form.priority) || 0)),
         start_at: fromInputDate(String(form.start_at ?? "")),
         end_at: fromInputDate(String(form.end_at ?? "")),
-        title_en: titleEn,
+        title_en: titleEn || null,
         title_so: String(form.title_so ?? "").trim() || null,
         description_en: String(form.description_en ?? "").trim() || null,
         description_so: String(form.description_so ?? "").trim() || null,
@@ -168,7 +170,7 @@ export default function AdvertisingManager() {
         image_path: imagePath,
         cta_en: String(form.cta_en ?? "").trim() || null,
         cta_so: String(form.cta_so ?? "").trim() || null,
-        action_type: form.ad_type === "action" ? form.action_type : null,
+        action_type: form.ad_type === "action" ? (form.action_type || null) : null,
         redirect_url: String(form.redirect_url ?? "").trim() || null,
         coupon_code: form.action_type === "coupon" ? String(form.coupon_code ?? "").trim() : null,
         coupon_title_en: String(form.coupon_title_en ?? "").trim() || null,
@@ -322,13 +324,13 @@ export default function AdvertisingManager() {
               <label><span className="admin-label">Start</span><input type="datetime-local" value={toInputDate(form.start_at)} onChange={(e)=>setForm(f=>({...f,start_at:e.target.value}))} className="admin-input"/></label>
               <label><span className="admin-label">End</span><input type="datetime-local" value={toInputDate(form.end_at)} onChange={(e)=>setForm(f=>({...f,end_at:e.target.value}))} className="admin-input"/></label>
 
-              <label><span className="admin-label">English header</span><input value={String(form.title_en ?? "")} onChange={(e)=>setForm(f=>({...f,title_en:e.target.value}))} maxLength={200} className="admin-input"/></label>
-              <label><span className="admin-label">Somali header</span><input value={String(form.title_so ?? "")} onChange={(e)=>setForm(f=>({...f,title_so:e.target.value}))} maxLength={200} className="admin-input"/></label>
+              <label><span className="admin-label">English header <em className="text-white/35">(optional if image is added)</em></span><input value={String(form.title_en ?? "")} onChange={(e)=>setForm(f=>({...f,title_en:e.target.value}))} maxLength={200} className="admin-input"/></label>
+              <label><span className="admin-label">Somali header <em className="text-white/35">(optional)</em></span><input value={String(form.title_so ?? "")} onChange={(e)=>setForm(f=>({...f,title_so:e.target.value}))} maxLength={200} className="admin-input"/></label>
               <label><span className="admin-label">English description</span><textarea rows={4} value={String(form.description_en ?? "")} onChange={(e)=>setForm(f=>({...f,description_en:e.target.value}))} maxLength={3000} className="admin-input"/></label>
               <label><span className="admin-label">Somali description</span><textarea rows={4} value={String(form.description_so ?? "")} onChange={(e)=>setForm(f=>({...f,description_so:e.target.value}))} maxLength={3000} className="admin-input"/></label>
               <label><span className="admin-label">English highlights (one per line)</span><textarea rows={4} value={joinLines(form.highlights_en)} onChange={(e)=>setForm(f=>({...f,highlights_en:lines(e.target.value)}))} className="admin-input"/></label>
               <label><span className="admin-label">Somali highlights (one per line)</span><textarea rows={4} value={joinLines(form.highlights_so)} onChange={(e)=>setForm(f=>({...f,highlights_so:lines(e.target.value)}))} className="admin-input"/></label>
-              <label className="lg:col-span-2"><span className="admin-label">Main advertisement image</span><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e)=>setImageFile(e.target.files?.[0] ?? null)} className="block text-sm"/></label>
+              <label className="lg:col-span-2"><span className="admin-label">Main advertisement image <em className="text-white/35">(optional)</em></span><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e)=>setImageFile(e.target.files?.[0] ?? null)} className="block text-sm"/></label>
               <label><span className="admin-label">English CTA</span><input value={String(form.cta_en ?? "")} onChange={(e)=>setForm(f=>({...f,cta_en:e.target.value}))} maxLength={80} className="admin-input"/></label>
               <label><span className="admin-label">Somali CTA</span><input value={String(form.cta_so ?? "")} onChange={(e)=>setForm(f=>({...f,cta_so:e.target.value}))} maxLength={80} className="admin-input"/></label>
             </div>
