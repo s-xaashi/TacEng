@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { createR2PresignedUrl, isR2DocumentKey } from "@/lib/r2";
+import {
+  createR2PresignedUrl,
+  getPublicR2Url,
+  isR2DocumentKey,
+} from "@/lib/r2";
 
 const SIGNED_URL_TTL_SECONDS = 5 * 60;
 
@@ -19,7 +23,7 @@ export async function POST(request: Request) {
     const supabase = getSupabaseAdmin();
     const { data: doc, error: docErr } = await supabase
       .from("documents")
-      .select("id, file_path, is_free, published, download_enabled, download_count")
+      .select("id, file_path, file_storage, is_free, published, download_enabled, download_count")
       .eq("id", documentId)
       .maybeSingle();
 
@@ -52,11 +56,15 @@ export async function POST(request: Request) {
     let url: string | null = null;
 
     if (isR2DocumentKey(doc.file_path)) {
-      url = await createR2PresignedUrl({
-        key: doc.file_path,
-        method: "GET",
-        expiresIn: SIGNED_URL_TTL_SECONDS,
-      });
+      if (doc.file_storage === "r2-public") {
+        url = getPublicR2Url(doc.file_path);
+      } else {
+        url = await createR2PresignedUrl({
+          key: doc.file_path,
+          method: "GET",
+          expiresIn: SIGNED_URL_TTL_SECONDS,
+        });
+      }
     } else {
       const legacy = supabase.storage
         .from("free-documents")
@@ -84,7 +92,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       url,
-      expiresIn: isR2DocumentKey(doc.file_path) ? SIGNED_URL_TTL_SECONDS : null,
+      expiresIn:
+        isR2DocumentKey(doc.file_path) && doc.file_storage !== "r2-public"
+          ? SIGNED_URL_TTL_SECONDS
+          : null,
     });
   } catch (error) {
     console.error("Free document download error", error);
