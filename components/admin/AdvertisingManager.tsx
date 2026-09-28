@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { optimizeImageForWeb } from "@/lib/imageOptimization";
 import { getThumbnailUrl } from "@/lib/supabase/storage";
 import type { AdCampaign, AdEvent, AdFormField, AdSubmission, AdType, AdActionType } from "@/lib/ads";
 import { csvCell } from "@/lib/ads";
@@ -125,9 +126,18 @@ export default function AdvertisingManager() {
     if (!client) throw new Error("Supabase is not configured.");
     if (!file.type.startsWith("image/")) throw new Error("Only image files are allowed.");
     if (file.size > 8 * 1024 * 1024) throw new Error("Images must be 8 MB or smaller.");
-    const extension = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "webp";
-    const path = `advertising/${folder}/${crypto.randomUUID()}.${extension}`;
-    const { error } = await client.storage.from("thumbnails").upload(path, file, { upsert: false, cacheControl: "31536000", contentType: file.type });
+
+    const optimizedFile = await optimizeImageForWeb(file, {
+      maxWidth: 1200,
+      maxHeight: 1200,
+      quality: 0.82,
+    });
+    const path = `advertising/${folder}/${crypto.randomUUID()}-${optimizedFile.name}`;
+    const { error } = await client.storage.from("thumbnails").upload(path, optimizedFile, {
+      upsert: false,
+      cacheControl: "31536000",
+      contentType: "image/webp",
+    });
     if (error) throw error;
     return path;
   }
