@@ -252,7 +252,12 @@ export default function DocumentManager() {
 
     const uploadResponse = await fetch(data.uploadUrl, {
       method: "PUT",
-      headers: { "Content-Type": contentType },
+      headers: {
+        "Content-Type": contentType,
+        ...(data.storage === "public"
+          ? { "Cache-Control": "public, max-age=31536000, immutable" }
+          : {}),
+      },
       body: file,
     });
 
