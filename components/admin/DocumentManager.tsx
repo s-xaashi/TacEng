@@ -618,16 +618,59 @@ export default function DocumentManager() {
 
   async function deleteDocument(doc: MarketplaceDocument) {
     if (!window.confirm(`Delete "${doc.title}"? This cannot be undone.`)) return;
+
     const client = getSupabaseClient();
     if (!client) return;
+
     const issue = await requireAdmin(client);
-    if (issue) { setError(issue); return; }
+    if (issue) {
+      setError(issue);
+      return;
+    }
+
+    const { data: { session } } = await client.auth.getSession();
+    if (!session?.access_token) {
+      setError("Your admin session has expired. Please sign in again.");
+      return;
+    }
 
     const images = allImages.filter(i => i.document_id === doc.id);
-    if (images.length) await client.storage.from("thumbnails").remove(images.map(i => i.image_path));
-    if (doc.thumbnail_path) await client.storage.from("thumbnails").remove([doc.thumbnail_path]);
-    if (doc.file_path) await client.storage.from(doc.is_free ? "free-documents" : "paid-documents").remove([doc.file_path]);
-    const { error: deleteError } = await client.from("documents").delete().eq("id", doc.id);
+    if (images.length) {
+      await client.storage
+        .from("thumbnails")
+        .remove(images.map(i => i.image_path));
+    }
+
+    if (doc.thumbnail_path) {
+      await client.storage.from("thumbnails").remove([doc.thumbnail_path]);
+    }
+
+    const r2Response = await fetch("/api/admin/r2-document", {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ documentId: doc.id }),
+    });
+
+    if (!r2Response.ok && r2Response.status !== 404) {
+      const body = await r2Response.json().catch(() => null);
+      setError(body?.error || "Could not remove R2 document files.");
+      return;
+    }
+
+    if (doc.file_path && !doc.file_path.startsWith("documents/")) {
+      await client.storage
+        .from(doc.is_free ? "free-documents" : "paid-documents")
+        .remove([doc.file_path]);
+    }
+
+    const { error: deleteError } = await client
+      .from("documents")
+      .delete()
+      .eq("id", doc.id);
+
     if (deleteError) setError(deleteError.message);
     else await load();
   }
