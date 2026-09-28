@@ -190,7 +190,7 @@ export default function DocumentManager() {
       const imagePath = `products/${documentId}/${crypto.randomUUID()}-${optimizedFile.name}`;
       const { error: uploadError } = await client.storage
         .from("thumbnails")
-        .upload(imagePath, optimizedFile, { cacheControl: "31536000", contentType: optimizedFile.type, upsert: false });
+        .upload(imagePath, optimizedFile, { cacheControl: "31536000", contentType: optimizedThumbnail.type, upsert: false });
 
       if (uploadError) throw uploadError;
 
