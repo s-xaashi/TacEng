@@ -7,20 +7,30 @@ export type OptimizedImageOptions = {
 const DEFAULT_OPTIONS: Required<OptimizedImageOptions> = {
   maxWidth: 1200,
   maxHeight: 1200,
-  quality: 0.82,
+  quality: 0.72,
 };
 
 /**
- * Converts an uploaded browser image to a reasonably sized WebP.
- * The original file is never modified; a new Blob is returned for upload.
+ * Optimizes a newly selected browser image for marketplace delivery.
+ *
+ * The source file is never modified. A WebP derivative is generated when
+ * possible, but the original is kept whenever the WebP would be larger.
+ * This prevents the optimizer from increasing storage/bandwidth usage.
  */
-export async function optimizeImageForWeb(file: File, options: OptimizedImageOptions = {}): Promise<File> {
+export async function optimizeImageForWeb(
+  file: File,
+  options: OptimizedImageOptions = {},
+): Promise<File> {
   if (!file.type.startsWith("image/")) {
     throw new Error("Only image files can be optimized.");
   }
 
-  const config = { ...DEFAULT_OPTIONS, ...options };
+  // Do not flatten animated GIFs or vector SVGs into a single raster frame.
+  if (file.type === "image/gif" || file.type === "image/svg+xml") {
+    return file;
+  }
 
+  const config = { ...DEFAULT_OPTIONS, ...options };
   const sourceUrl = URL.createObjectURL(file);
 
   try {
@@ -60,7 +70,14 @@ export async function optimizeImageForWeb(file: File, options: OptimizedImageOpt
       );
     });
 
-    const baseName = file.name.replace(/.[^/.]+$/, "").replace(/[^a-zA-Z0-9._-]/g, "-") || "image";
+    // Keep the original when conversion would make the file larger.
+    if (blob.size >= file.size) {
+      return file;
+    }
+
+    const baseName =
+      file.name.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9._-]/g, "-") || "image";
+
     return new File([blob], `${baseName}-web.webp`, {
       type: "image/webp",
       lastModified: Date.now(),
