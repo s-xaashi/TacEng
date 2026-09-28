@@ -214,52 +214,118 @@ export default function DocumentManager() {
     }
   }
 
+  async function uploadProductFileToR2(
+    client: NonNullable<ReturnType<typeof getSupabaseClient>>,
+    file: File,
+    documentId: string,
+    variantId: string | null
+  ) {
+    if (file.size > 50 * 1024 * 1024) {
+      throw new Error("Product files must be 50 MB or smaller.");
+    }
+
+    const { data: { session } } = await client.auth.getSession();
+    if (!session?.access_token) {
+      throw new Error("Your admin session has expired. Please sign in again.");
+    }
+
+    const contentType = file.type || "application/octet-stream";
+    const response = await fetch("/api/admin/r2-upload-url", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        documentId,
+        variantId,
+        fileName: file.name,
+        contentType,
+        fileSize: file.size,
+      }),
+    });
+
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !data?.uploadUrl || !data?.key) {
+      throw new Error(data?.error || "Could not prepare the R2 upload.");
+    }
+
+    const uploadResponse = await fetch(data.uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": contentType },
+      body: file,
+    });
+
+    if (!uploadResponse.ok) {
+      const responseText = await uploadResponse.text().catch(() => "");
+      throw new Error(
+        `R2 upload failed (${uploadResponse.status})${responseText ? `: ${responseText.slice(0, 200)}` : "."}`
+      );
+    }
+
+    return data.key as string;
+  }
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
-    const client = getSupabaseClient();
-    if (!client) { setError("Marketplace isn't configured."); return; }
-    const issue = await requireAdmin(client);
-    if (issue) { setError(issue); return; }
 
-    const editing = Boolean(form.id);
-    if (editing && form.existingIsFree !== null && form.existingIsFree !== form.is_free && !form.productFile) {
-      setError("You changed Free/Paid status — please re-upload the PDF so it moves to the correct storage bucket.");
+    const client = getSupabaseClient();
+    if (!client) {
+      setError("Marketplace isn't configured.");
       return;
     }
-    if (!form.title.trim()) { setError("Title is required."); return; }
-    if (!form.is_free && Number(form.price) < 0) { setError("Price cannot be negative."); return; }
+
+    const issue = await requireAdmin(client);
+    if (issue) {
+      setError(issue);
+      return;
+    }
+
+    const editing = Boolean(form.id);
+    if (
+      editing &&
+      form.existingIsFree !== null &&
+      form.existingIsFree !== form.is_free &&
+      !form.productFile
+    ) {
+      setError(
+        "You changed Free/Paid status — please re-upload the product file so it moves to the correct access type."
+      );
+      return;
+    }
+
+    if (!form.title.trim()) {
+      setError("Title is required.");
+      return;
+    }
+
+    if (!form.is_free && Number(form.price) < 0) {
+      setError("Price cannot be negative.");
+      return;
+    }
 
     setSaving(true);
+
     try {
+      const documentId = form.id ?? crypto.randomUUID();
+
       let thumbnailPath = form.existingThumbnailPath;
       if (form.thumbnailFile) {
-        if (form.thumbnailFile.size > 8 * 1024 * 1024) throw new Error("Thumbnail must be 8 MB or smaller.");
-        const path = `products/${crypto.randomUUID()}-${form.thumbnailFile.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-        const { error: uploadError } = await client.storage.from("thumbnails").upload(path, form.thumbnailFile, { cacheControl: "31536000", upsert: false });
-        if (uploadError) throw uploadError;
-        thumbnailPath = path;
-      }
-
-      let filePath = form.existingFilePath;
-      if (form.productFile) {
-        const MAX_PRODUCT_FILE_SIZE = 50 * 1024 * 1024;
-        if (form.productFile.size > MAX_PRODUCT_FILE_SIZE) {
-          throw new Error("Product files must be 50 MB or smaller.");
+        if (form.thumbnailFile.size > 8 * 1024 * 1024) {
+          throw new Error("Thumbnail must be 8 MB or smaller.");
         }
 
-        const bucket = form.is_free ? "free-documents" : "paid-documents";
-        const path = `products/${crypto.randomUUID()}-${form.productFile.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+        const path = `products/${crypto.randomUUID()}-${form.thumbnailFile.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
         const { error: uploadError } = await client.storage
-          .from(bucket)
-          .upload(path, form.productFile, {
-            upsert: false,
-            contentType: form.productFile.type || "application/octet-stream",
+          .from("thumbnails")
+          .upload(path, form.thumbnailFile, {
             cacheControl: "31536000",
+            upsert: false,
           });
 
         if (uploadError) throw uploadError;
-        filePath = path;
+        thumbnailPath = path;
       }
 
       const payload = {
@@ -276,67 +342,146 @@ export default function DocumentManager() {
         download_enabled: form.download_enabled,
         published: form.published,
         thumbnail_path: thumbnailPath,
-        file_path: filePath,
+        file_path: form.existingFilePath,
       };
 
-      let documentId = form.id;
-      if (documentId) {
-        const { error: updateError } = await client.from("documents").update(payload).eq("id", documentId);
+      if (editing) {
+        const { error: updateError } = await client
+          .from("documents")
+          .update(payload)
+          .eq("id", documentId);
+
         if (updateError) throw updateError;
       } else {
-        const { data, error: insertError } = await client.from("documents").insert(payload).select("id").single();
-        if (insertError || !data) throw insertError ?? new Error("Could not create document.");
-        documentId = data.id;
+        const { error: insertError } = await client
+          .from("documents")
+          .insert({
+            id: documentId,
+            ...payload,
+            file_path: null,
+          });
+
+        if (insertError) throw insertError;
       }
 
-      if (!documentId) {
-        throw new Error("Could not determine the document ID.");
+      let filePath = form.existingFilePath;
+
+      if (form.productFile) {
+        filePath = await uploadProductFileToR2(
+          client,
+          form.productFile,
+          documentId,
+          null
+        );
+
+        const { error: filePathError } = await client
+          .from("documents")
+          .update({ file_path: filePath })
+          .eq("id", documentId);
+
+        if (filePathError) throw filePathError;
       }
 
-      const existingVariantIds = (await client.from("document_variants").select("id").eq("document_id", documentId)).data?.map(v => v.id) ?? [];
+      const existingVariantIds =
+        (await client
+          .from("document_variants")
+          .select("id")
+          .eq("document_id", documentId)).data?.map(v => v.id) ?? [];
+
       const keepVariantIds = form.variants.flatMap(v => v.id ? [v.id] : []);
-      const removedVariantIds = existingVariantIds.filter(id => !keepVariantIds.includes(id));
+      const removedVariantIds = existingVariantIds.filter(
+        id => !keepVariantIds.includes(id)
+      );
 
       if (removedVariantIds.length) {
-        const removedImages = allImages.filter(i => i.document_id === documentId && i.variant_id && removedVariantIds.includes(i.variant_id));
+        const removedImages = allImages.filter(
+          i =>
+            i.document_id === documentId &&
+            i.variant_id &&
+            removedVariantIds.includes(i.variant_id)
+        );
+
         if (removedImages.length) {
-          await client.storage.from("thumbnails").remove(removedImages.map(i => i.image_path));
-          await client.from("document_images").delete().in("id", removedImages.map(i => i.id));
+          await client.storage
+            .from("thumbnails")
+            .remove(removedImages.map(i => i.image_path));
+          await client
+            .from("document_images")
+            .delete()
+            .in("id", removedImages.map(i => i.id));
         }
-        const { error: removeError } = await client.from("document_variants").delete().in("id", removedVariantIds);
+
+        const { error: removeError } = await client
+          .from("document_variants")
+          .delete()
+          .in("id", removedVariantIds);
+
         if (removeError) throw removeError;
       }
 
       for (const [index, draft] of form.variants.entries()) {
         let variantId = draft.id;
         const label = draft.label.trim();
+
         if (!label) continue;
 
         const variantPrice = Math.max(0, Number(draft.price) || 0);
-        const desiredBucket = variantPrice > 0 ? "paid-documents" : "free-documents";
+        const desiredBucket =
+          variantPrice > 0 ? "paid-documents" : "free-documents";
+
         let variantFilePath = draft.existingFilePath;
         let variantFileBucket = draft.existingFileBucket;
 
-        if (draft.productFile) {
-          if (draft.productFile.size > 50 * 1024 * 1024) {
-            throw new Error("Level files must be 50 MB or smaller.");
+        if (
+          variantFilePath &&
+          variantFileBucket &&
+          variantFileBucket !== desiredBucket &&
+          !draft.productFile
+        ) {
+          throw new Error(
+            `Level "${label}" needs a new file upload because its ${variantPrice > 0 ? "paid" : "free"} access type changed.`
+          );
+        }
+
+        if (!variantId) {
+          const { data, error: insertError } = await client
+            .from("document_variants")
+            .insert({
+              document_id: documentId,
+              label,
+              price: variantPrice,
+              enabled: draft.enabled,
+              sort_order: index,
+              file_path: null,
+              file_bucket: desiredBucket,
+            })
+            .select("id")
+            .single();
+
+          if (insertError || !data) {
+            throw insertError ?? new Error("Could not create product option.");
           }
-          const path = `products/${documentId}/levels/${crypto.randomUUID()}-${draft.productFile.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-          const { error: uploadError } = await client.storage
-            .from(desiredBucket)
-            .upload(path, draft.productFile, {
-              upsert: false,
-              contentType: draft.productFile.type || "application/octet-stream",
-              cacheControl: "31536000",
-            });
-          if (uploadError) throw uploadError;
-          variantFilePath = path;
+
+          variantId = data.id;
+        }
+
+        if (!variantId) {
+          throw new Error("Could not determine the product option ID.");
+        }
+
+        if (draft.productFile) {
+          variantFilePath = await uploadProductFileToR2(
+            client,
+            draft.productFile,
+            documentId,
+            variantId
+          );
           variantFileBucket = desiredBucket;
         } else if (!variantFilePath && index === 0 && filePath) {
-          // The first level automatically uses the main product upload.
-          // This is safe only when the level's free/paid access matches the
-          // main product's storage bucket.
-          const mainBucket = form.is_free ? "free-documents" : "paid-documents";
+          const mainBucket = form.is_free
+            ? "free-documents"
+            : "paid-documents";
+
           if (desiredBucket === mainBucket) {
             variantFilePath = filePath;
             variantFileBucket = mainBucket;
@@ -367,17 +512,19 @@ export default function DocumentManager() {
           file_bucket: variantFileBucket,
         };
 
-        if (variantId) {
-          const { error: updateError } = await client.from("document_variants").update(variantPayload).eq("id", variantId);
-          if (updateError) throw updateError;
-        } else {
-          const { data, error: insertError } = await client.from("document_variants").insert(variantPayload).select("id").single();
-          if (insertError || !data) throw insertError ?? new Error("Could not create product option.");
-          variantId = data.id;
-        }
+        const { error: updateError } = await client
+          .from("document_variants")
+          .update(variantPayload)
+          .eq("id", variantId);
 
-        if (!variantId) throw new Error("Could not determine the product option ID.");
-        await uploadImages(client, draft.imageFiles, documentId, variantId);
+        if (updateError) throw updateError;
+
+        await uploadImages(
+          client,
+          draft.imageFiles,
+          documentId,
+          variantId
+        );
       }
 
       await uploadImages(client, form.galleryFiles, documentId, null);
