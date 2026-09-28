@@ -19,17 +19,18 @@ function getR2Config(storage: R2Storage = "private"): R2Config {
   const endpoint = (process.env.R2_ENDPOINT?.trim() ||
     (accountId ? `https://${accountId}.r2.cloudflarestorage.com` : "")).replace(/\/$/, "");
 
+  const publicAccessKeyId = process.env.R2_PUBLIC_ACCESS_KEY_ID?.trim();
+  const publicSecretAccessKey = process.env.R2_PUBLIC_SECRET_ACCESS_KEY?.trim();
+
   const accessKeyId =
-    (storage === "public"
-      ? process.env.R2_PUBLIC_ACCESS_KEY_ID?.trim()
-      : process.env.R2_ACCESS_KEY_ID?.trim()) ||
-    process.env.R2_ACCESS_KEY_ID?.trim();
+    storage === "public" && publicAccessKeyId && publicSecretAccessKey
+      ? publicAccessKeyId
+      : process.env.R2_ACCESS_KEY_ID?.trim();
 
   const secretAccessKey =
-    (storage === "public"
-      ? process.env.R2_PUBLIC_SECRET_ACCESS_KEY?.trim()
-      : process.env.R2_SECRET_ACCESS_KEY?.trim()) ||
-    process.env.R2_SECRET_ACCESS_KEY?.trim();
+    storage === "public" && publicAccessKeyId && publicSecretAccessKey
+      ? publicSecretAccessKey
+      : process.env.R2_SECRET_ACCESS_KEY?.trim();
 
   const bucket =
     (storage === "public"
