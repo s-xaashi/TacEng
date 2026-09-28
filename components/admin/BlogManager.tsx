@@ -30,9 +30,9 @@ export default function BlogManager(){
   if(!s)throw new Error("Supabase is not configured.");
   if(!file.type.startsWith("image/"))throw new Error("Only image files are allowed.");
   if(file.size>8*1024*1024)throw new Error("Images must be 8 MB or smaller.");
-  const optimizedFile=await optimizeImageForWeb(file,{maxWidth:1200,maxHeight:1200,quality:0.82});
+  const optimizedFile=await optimizeImageForWeb(file,{maxWidth:1200,maxHeight:1200,quality:0.72});
   const path=`blogs/${crypto.randomUUID()}-${optimizedFile.name}`;
-  const{error}=await s.storage.from("thumbnails").upload(path,optimizedFile,{upsert:true,cacheControl:"31536000",contentType:"image/webp"});
+  const{error}=await s.storage.from("thumbnails").upload(path,optimizedFile,{upsert:true,cacheControl:"31536000",contentType:optimizedFile.type});
   if(error)throw error;
   return path
 };
