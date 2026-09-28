@@ -190,7 +190,7 @@ export default function DocumentManager() {
       const imagePath = `products/${documentId}/${crypto.randomUUID()}-${optimizedFile.name}`;
       const { error: uploadError } = await client.storage
         .from("thumbnails")
-        .upload(imagePath, optimizedFile, { cacheControl: "31536000", contentType: optimizedThumbnail.type, upsert: false });
+        .upload(imagePath, optimizedFile, { cacheControl: "31536000", contentType: optimizedFile.type, upsert: false });
 
       if (uploadError) throw uploadError;
 
@@ -239,7 +239,7 @@ export default function DocumentManager() {
         if (form.thumbnailFile.size > 8 * 1024 * 1024) throw new Error("Thumbnail must be 8 MB or smaller.");
         const optimizedThumbnail = await optimizeImageForWeb(form.thumbnailFile, { maxWidth: 1200, maxHeight: 1200, quality: 0.72 });
         const path = `products/${crypto.randomUUID()}-${optimizedThumbnail.name}`;
-        const { error: uploadError } = await client.storage.from("thumbnails").upload(path, optimizedThumbnail, { cacheControl: "31536000", contentType: optimizedFile.type, upsert: false });
+        const { error: uploadError } = await client.storage.from("thumbnails").upload(path, optimizedThumbnail, { cacheControl: "31536000", contentType: optimizedThumbnail.type, upsert: false });
         if (uploadError) throw uploadError;
         thumbnailPath = path;
       }
