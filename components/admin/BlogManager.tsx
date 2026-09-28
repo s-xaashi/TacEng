@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { optimizeImageForWeb } from "@/lib/imageOptimization";
 
 type Block={id:string;type:"paragraph"|"heading"|"image"|"date"|"highlight";text:string;text_en?:string;text_so?:string;image_path?:string;color?:string;level?:2|3};
 type Section={id:string;label:string;label_en:string;label_so:string|null;sort_order:number};
@@ -24,7 +25,17 @@ export default function BlogManager(){
  const addBlock=(type:Block["type"])=>setForm(f=>({...f,blocks:[...f.blocks,{...emptyBlock(),type,color:type==="highlight"?"#e45560":undefined,level:type==="heading"?2:undefined}]}));
  const removeBlock=(i:number)=>setForm(f=>({...f,blocks:f.blocks.filter((_,n)=>n!==i)}));
  const move=(from:number,to:number)=>setForm(f=>{const a=[...f.blocks],b=a.splice(from,1)[0];a.splice(to,0,b);return {...f,blocks:a}});
- const uploadImage=async(file:File)=>{const s=getSupabaseClient();if(!s)throw new Error("Supabase is not configured.");const path=`blogs/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g,"-")}`;const{error}=await s.storage.from("thumbnails").upload(path,file,{upsert:true});if(error)throw error;return path};
+ const uploadImage=async(file:File)=>{
+  const s=getSupabaseClient();
+  if(!s)throw new Error("Supabase is not configured.");
+  if(!file.type.startsWith("image/"))throw new Error("Only image files are allowed.");
+  if(file.size>8*1024*1024)throw new Error("Images must be 8 MB or smaller.");
+  const optimizedFile=await optimizeImageForWeb(file,{maxWidth:1200,maxHeight:1200,quality:0.82});
+  const path=`blogs/${crypto.randomUUID()}-${optimizedFile.name}`;
+  const{error}=await s.storage.from("thumbnails").upload(path,optimizedFile,{upsert:true,cacheControl:"31536000",contentType:"image/webp"});
+  if(error)throw error;
+  return path
+};
  const save=async()=>{const s=getSupabaseClient();if(!s)return;setSaving(true);setMessage("");try{let coverPath=form.cover_image_path;if(cover)coverPath=await uploadImage(cover);const englishBlocks=form.blocks.map(b=>({...b,text:b.text_en??b.text,text_en:b.text_en??b.text,text_so:undefined}));const somaliBlocks=form.blocks.map(b=>({...b,text:b.text_so??"",text_en:undefined,text_so:b.text_so??""}));const payload={title:form.title_en.trim(),title_en:form.title_en.trim(),title_so:form.title_so.trim()||null,excerpt:form.excerpt_en.trim()||null,excerpt_en:form.excerpt_en.trim()||null,excerpt_so:form.excerpt_so.trim()||null,published:form.published,published_at:form.published_at?new Date(form.published_at+"T12:00:00").toISOString():null,sort_order:Number(form.sort_order)||0,section_id:form.section_id||null,cover_image_path:coverPath,blocks:englishBlocks,blocks_en:englishBlocks,blocks_so:somaliBlocks,updated_at:new Date().toISOString()};const result=editing?await s.from("blogs").update(payload).eq("id",editing):await s.from("blogs").insert(payload);if(result.error)throw result.error;setMessage(editing?"Blog updated successfully.":"Blog created successfully.");reset();await load()}catch(e){setMessage(e instanceof Error?e.message:"Save failed.")}finally{setSaving(false)}};
  const edit=(p:Post)=>{setEditing(p.id);setForm({title_en:p.title_en||p.title,title_so:p.title_so??"",excerpt_en:p.excerpt_en??p.excerpt??"",excerpt_so:p.excerpt_so??"",published:p.published,published_at:p.published_at?p.published_at.slice(0,10):"",sort_order:p.sort_order,section_id:p.section_id??sections[0]?.id??"",cover_image_path:p.cover_image_path,blocks:normalizeBlocks(p.blocks_en,p.blocks_so,p.blocks)});setCover(null);window.scrollTo({top:0,behavior:"smooth"})};
  const remove=async(id:string)=>{if(!confirm("Delete this blog?"))return;const s=getSupabaseClient();if(!s)return;const{error}=await s.from("blogs").delete().eq("id",id);setMessage(error?error.message:"Blog deleted.");await load()};
