@@ -130,13 +130,13 @@ export default function AdvertisingManager() {
     const optimizedFile = await optimizeImageForWeb(file, {
       maxWidth: 1200,
       maxHeight: 1200,
-      quality: 0.82,
+      quality: 0.72,
     });
     const path = `advertising/${folder}/${crypto.randomUUID()}-${optimizedFile.name}`;
     const { error } = await client.storage.from("thumbnails").upload(path, optimizedFile, {
       upsert: false,
       cacheControl: "31536000",
-      contentType: "image/webp",
+      contentType: optimizedFile.type,
     });
     if (error) throw error;
     return path;
