@@ -185,12 +185,12 @@ export default function DocumentManager() {
     for (const [index, file] of files.entries()) {
       if (!file.type.startsWith("image/")) throw new Error("Only image files can be uploaded to the gallery.");
       if (file.size > 8 * 1024 * 1024) throw new Error("Each gallery image must be 8 MB or smaller.");
-      const optimizedFile = await optimizeImageForWeb(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.82 });
+      const optimizedFile = await optimizeImageForWeb(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.72 });
 
       const imagePath = `products/${documentId}/${crypto.randomUUID()}-${optimizedFile.name}`;
       const { error: uploadError } = await client.storage
         .from("thumbnails")
-        .upload(imagePath, optimizedFile, { cacheControl: "31536000", contentType: "image/webp", upsert: false });
+        .upload(imagePath, optimizedFile, { cacheControl: "31536000", contentType: optimizedFile.type, upsert: false });
 
       if (uploadError) throw uploadError;
 
@@ -237,9 +237,9 @@ export default function DocumentManager() {
       let thumbnailPath = form.existingThumbnailPath;
       if (form.thumbnailFile) {
         if (form.thumbnailFile.size > 8 * 1024 * 1024) throw new Error("Thumbnail must be 8 MB or smaller.");
-        const optimizedThumbnail = await optimizeImageForWeb(form.thumbnailFile, { maxWidth: 1200, maxHeight: 1200, quality: 0.82 });
+        const optimizedThumbnail = await optimizeImageForWeb(form.thumbnailFile, { maxWidth: 1200, maxHeight: 1200, quality: 0.72 });
         const path = `products/${crypto.randomUUID()}-${optimizedThumbnail.name}`;
-        const { error: uploadError } = await client.storage.from("thumbnails").upload(path, optimizedThumbnail, { cacheControl: "31536000", contentType: "image/webp", upsert: false });
+        const { error: uploadError } = await client.storage.from("thumbnails").upload(path, optimizedThumbnail, { cacheControl: "31536000", contentType: optimizedFile.type, upsert: false });
         if (uploadError) throw uploadError;
         thumbnailPath = path;
       }
