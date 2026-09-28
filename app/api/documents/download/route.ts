@@ -47,6 +47,7 @@ export async function POST(req: NextRequest) {
 
   let filePath = doc.file_path;
   let fileBucket = "paid-documents";
+  let fileStorage = doc.file_storage ?? "supabase";
 
   if (purchase.variant_id) {
     const { data: variant, error: variantErr } = await supabase
@@ -66,7 +67,8 @@ export async function POST(req: NextRequest) {
 
     filePath = variant.file_path;
     fileBucket = variant.file_bucket;
-    if (variant.file_storage === "r2-public") {
+    fileStorage = variant.file_storage ?? "supabase";
+    if (fileStorage === "r2-public") {
       return NextResponse.json(
         { error: "The paid level file is not stored in protected storage." },
         { status: 500 }
@@ -81,7 +83,7 @@ export async function POST(req: NextRequest) {
   let downloadUrl: string | null = null;
 
   if (isR2DocumentKey(filePath)) {
-    if (doc.file_storage === "r2-public") {
+    if (fileStorage === "r2-public") {
       return NextResponse.json(
         { error: "The paid document file is not stored in protected storage." },
         { status: 500 }
