@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { createR2PresignedUrl, makeR2DocumentKey } from "@/lib/r2";
+import {
+  createR2PresignedUrl,
+  hasPublicR2Delivery,
+  makeR2DocumentKey,
+} from "@/lib/r2";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -64,7 +68,7 @@ export async function POST(request: Request) {
 
     const { data: document } = await auth.admin
       .from("documents")
-      .select("id")
+      .select("id, is_free")
       .eq("id", documentId)
       .maybeSingle();
 
@@ -72,10 +76,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Document not found." }, { status: 404 });
     }
 
+    let storage: "private" | "public" = document.is_free ? "public" : "private";
+
     if (variantId) {
       const { data: variant } = await auth.admin
         .from("document_variants")
-        .select("id")
+        .select("id, price")
         .eq("id", variantId)
         .eq("document_id", documentId)
         .maybeSingle();
@@ -83,6 +89,18 @@ export async function POST(request: Request) {
       if (!variant) {
         return NextResponse.json({ error: "Invalid product level." }, { status: 400 });
       }
+
+      storage = Number(variant.price) > 0 ? "private" : "public";
+    }
+
+    if (storage === "public" && !hasPublicR2Delivery()) {
+      return NextResponse.json(
+        {
+          error:
+            "Public R2 delivery is not configured yet. Add R2_PUBLIC_BUCKET_NAME and R2_PUBLIC_BASE_URL before uploading free files.",
+        },
+        { status: 503 }
+      );
     }
 
     const key = makeR2DocumentKey(documentId, fileName, variantId);
@@ -91,12 +109,18 @@ export async function POST(request: Request) {
       method: "PUT",
       expiresIn: 10 * 60,
       contentType,
+      storage,
+      cacheControl:
+        storage === "public"
+          ? "public, max-age=31536000, immutable"
+          : null,
     });
 
     return NextResponse.json({
       key,
       uploadUrl,
       expiresIn: 10 * 60,
+      storage,
     });
   } catch (error) {
     console.error("R2 upload URL error", error);
