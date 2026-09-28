@@ -97,7 +97,7 @@ export default function DocumentManager() {
     const [{ data: cats }, { data: types }, { data: docs }, { data: images }, { data: reviewRows }] = await Promise.all([
       client.from("categories").select("id, name, slug").order("name"),
       client.from("product_types").select("id, name, slug").order("name"),
-      client.from("documents").select("id, title, description, title_en, description_en, title_so, description_so, category_id, file_path, thumbnail_path, price, is_free, payment_link, published, download_enabled, product_type, download_count, download_count_adjustment, created_at, updated_at").order("created_at", { ascending: false }),
+      client.from("documents").select("id, title, description, title_en, description_en, title_so, description_so, category_id, file_path, file_storage, thumbnail_path, price, is_free, payment_link, published, download_enabled, product_type, download_count, download_count_adjustment, created_at, updated_at").order("created_at", { ascending: false }),
       client.from("document_images").select("id, document_id, variant_id, image_path, alt_text, sort_order, created_at").order("sort_order"),
       client.from("document_reviews").select("*").order("created_at", { ascending: false }),
     ]);
@@ -723,6 +723,7 @@ export default function DocumentManager() {
           productFile: null,
           existingFilePath: null,
           existingFileBucket: null,
+          existingFileStorage: null,
           existingImages: [],
         },
       ],
