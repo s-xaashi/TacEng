@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getPurchaseById } from "@/lib/sifalo/purchases";
+import { createR2PresignedUrl, isR2DocumentKey } from "@/lib/r2";
 
 const SIGNED_URL_TTL_SECONDS = 5 * 60; // short-lived, per spec
 
@@ -71,15 +72,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Document file not found." }, { status: 404 });
   }
 
-  const { data: signed, error: signErr } = await supabase.storage
-    .from(fileBucket)
-    .createSignedUrl(filePath, SIGNED_URL_TTL_SECONDS);
+  let downloadUrl: string | null = null;
 
-  if (signErr || !signed) {
-    return NextResponse.json(
-      { error: "Could not generate a download link. Please try again." },
-      { status: 500 }
-    );
+  if (isR2DocumentKey(filePath)) {
+    downloadUrl = await createR2PresignedUrl({
+      key: filePath,
+      method: "GET",
+      expiresIn: SIGNED_URL_TTL_SECONDS,
+    });
+  } else {
+    const { data: signed, error: signErr } = await supabase.storage
+      .from(fileBucket)
+      .createSignedUrl(filePath, SIGNED_URL_TTL_SECONDS);
+
+    if (signErr || !signed) {
+      return NextResponse.json(
+        { error: "Could not generate a download link. Please try again." },
+        { status: 500 }
+      );
+    }
+
+    downloadUrl = signed.signedUrl;
   }
 
   await supabase
@@ -87,5 +100,5 @@ export async function POST(req: NextRequest) {
     .update({ download_count: (doc.download_count ?? 0) + 1 })
     .eq("id", doc.id);
 
-  return NextResponse.json({ url: signed.signedUrl, expiresIn: SIGNED_URL_TTL_SECONDS });
+  return NextResponse.json({ url: downloadUrl, expiresIn: SIGNED_URL_TTL_SECONDS });
 }
