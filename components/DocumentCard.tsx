@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
-import { getFreeDocumentUrl, getThumbnailUrl } from "@/lib/supabase/storage";
+import { getThumbnailUrl } from "@/lib/supabase/storage";
 import type { MarketplaceDocument } from "@/lib/supabase/types";
 import DocumentProductModal from "./marketplace/DocumentProductModal";
 import { useLanguage } from "@/components/LanguageProvider";
@@ -57,10 +57,21 @@ export default function DocumentCard({
   async function handleQuickDownload(event: React.MouseEvent) {
     event.stopPropagation();
     if (!activeIsFree || !doc.download_enabled || !doc.file_path) return;
-    const client = getSupabaseClient();
-    if (client) await client.rpc("increment_download_count", { doc_id: doc.id });
-    const url = getFreeDocumentUrl(doc.file_path);
-    if (url) window.open(url, "_blank", "noopener,noreferrer");
+
+    try {
+      const response = await fetch("/api/documents/free-download", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentId: doc.id }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.url) {
+        throw new Error(data?.error || "Download failed.");
+      }
+      window.open(data.url, "_blank", "noopener,noreferrer");
+    } catch (error) {
+      console.error("Free document download failed", error);
+    }
   }
 
   return (
