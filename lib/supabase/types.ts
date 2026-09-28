@@ -19,6 +19,7 @@ export type DocumentVariant = {
   sort_order: number;
   file_path: string | null;
   file_bucket: "free-documents" | "paid-documents";
+  file_storage: "supabase" | "r2-private" | "r2-public";
   created_at?: string;
   updated_at?: string;
 };
@@ -54,6 +55,7 @@ export type MarketplaceDocument = {
   description_so?: string | null;
   category_id: string | null;
   file_path: string | null;
+  file_storage: "supabase" | "r2-private" | "r2-public";
   thumbnail_path: string | null;
   price: number;
   is_free: boolean;
