@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { optimizeImageForWeb } from "@/lib/imageOptimization";
 import { getThumbnailUrl } from "@/lib/supabase/storage";
 import type { Category, DocumentImage, DocumentReview, DocumentVariant, MarketplaceDocument, ProductType } from "@/lib/supabase/types";
 
@@ -184,11 +185,12 @@ export default function DocumentManager() {
     for (const [index, file] of files.entries()) {
       if (!file.type.startsWith("image/")) throw new Error("Only image files can be uploaded to the gallery.");
       if (file.size > 8 * 1024 * 1024) throw new Error("Each gallery image must be 8 MB or smaller.");
+      const optimizedFile = await optimizeImageForWeb(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.82 });
 
-      const imagePath = `products/${documentId}/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      const imagePath = `products/${documentId}/${crypto.randomUUID()}-${optimizedFile.name}`;
       const { error: uploadError } = await client.storage
         .from("thumbnails")
-        .upload(imagePath, file, { cacheControl: "31536000", upsert: false });
+        .upload(imagePath, optimizedFile, { cacheControl: "31536000", contentType: "image/webp", upsert: false });
 
       if (uploadError) throw uploadError;
 
@@ -235,8 +237,9 @@ export default function DocumentManager() {
       let thumbnailPath = form.existingThumbnailPath;
       if (form.thumbnailFile) {
         if (form.thumbnailFile.size > 8 * 1024 * 1024) throw new Error("Thumbnail must be 8 MB or smaller.");
-        const path = `products/${crypto.randomUUID()}-${form.thumbnailFile.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-        const { error: uploadError } = await client.storage.from("thumbnails").upload(path, form.thumbnailFile, { cacheControl: "31536000", upsert: false });
+        const optimizedThumbnail = await optimizeImageForWeb(form.thumbnailFile, { maxWidth: 1200, maxHeight: 1200, quality: 0.82 });
+        const path = `products/${crypto.randomUUID()}-${optimizedThumbnail.name}`;
+        const { error: uploadError } = await client.storage.from("thumbnails").upload(path, optimizedThumbnail, { cacheControl: "31536000", contentType: "image/webp", upsert: false });
         if (uploadError) throw uploadError;
         thumbnailPath = path;
       }
