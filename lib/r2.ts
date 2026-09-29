@@ -147,17 +147,21 @@ export async function createR2PresignedUrl(params: {
   );
   url.searchParams.set("X-Amz-Expires", String(expiresIn));
 
-  const headers =
-    params.method === "PUT"
-      ? {
-          ...(params.contentType ? { "Content-Type": params.contentType } : {}),
-          ...(params.cacheControl ? { "Cache-Control": params.cacheControl } : {}),
-        }
+  // Sign the Content-Type used by the browser PUT. Keep Cache-Control
+  // as an unsigned request header so it cannot cause a SigV4 mismatch.
+  const signedHeaders =
+    params.method === "PUT" && params.contentType
+      ? { "Content-Type": params.contentType }
       : undefined;
 
-  const signed = await client.sign(url.toString(), {
+  // Pass a Request object to aws4fetch so the signed request and its
+  // headers are constructed together, matching Cloudflare's R2 pattern.
+  const request = new Request(url.toString(), {
     method: params.method,
-    headers,
+    headers: signedHeaders,
+  });
+
+  const signed = await client.sign(request, {
     aws: {
       signQuery: true,
     },
