@@ -16,8 +16,29 @@ type R2Storage = "private" | "public";
 
 function getR2Config(storage: R2Storage = "private"): R2Config {
   const accountId = process.env.R2_ACCOUNT_ID?.trim();
-  const endpoint = (process.env.R2_ENDPOINT?.trim() ||
-    (accountId ? `https://${accountId}.r2.cloudflarestorage.com` : "")).replace(/\/$/, "");
+  const jurisdiction = (process.env.R2_JURISDICTION?.trim().toLowerCase() || "eu");
+
+  // These buckets are created in the EU R2 jurisdiction. Cloudflare requires
+  // jurisdictional buckets to use the jurisdiction-specific S3 endpoint.
+  // If R2_ENDPOINT is still set to the generic endpoint, normalize it here
+  // so the browser presigned PUT is sent to the correct R2 endpoint.
+  const configuredEndpoint = process.env.R2_ENDPOINT?.trim();
+  let endpoint = accountId
+    ? `https://${accountId}.${jurisdiction === "default" ? "" : `${jurisdiction}.`}r2.cloudflarestorage.com`
+    : "";
+
+  if (configuredEndpoint) {
+    try {
+      const parsed = new URL(configuredEndpoint);
+      const genericHost = accountId ? `${accountId}.r2.cloudflarestorage.com` : "";
+      if (parsed.hostname === genericHost && jurisdiction !== "default") {
+        parsed.hostname = `${accountId}.${jurisdiction}.r2.cloudflarestorage.com`;
+      }
+      endpoint = parsed.toString().replace(/\/$/, "");
+    } catch {
+      endpoint = configuredEndpoint.replace(/\/$/, "");
+    }
+  }
 
   const publicAccessKeyId = process.env.R2_PUBLIC_ACCESS_KEY_ID?.trim();
   const publicSecretAccessKey = process.env.R2_PUBLIC_SECRET_ACCESS_KEY?.trim();
