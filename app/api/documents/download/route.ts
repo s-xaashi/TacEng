@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   const supabase = getSupabaseAdmin();
   const { data: doc, error: docErr } = await supabase
     .from("documents")
-    .select("id, file_path, download_count, download_enabled")
+    .select("id, file_path, file_storage, download_count, download_enabled")
     .eq("id", purchase.document_id)
     .maybeSingle();
 
@@ -47,11 +47,12 @@ export async function POST(req: NextRequest) {
 
   let filePath = doc.file_path;
   let fileBucket = "paid-documents";
+  let fileStorage = doc.file_storage ?? "supabase";
 
   if (purchase.variant_id) {
     const { data: variant, error: variantErr } = await supabase
       .from("document_variants")
-      .select("id, document_id, price, enabled, file_path, file_bucket")
+      .select("id, document_id, price, enabled, file_path, file_bucket, file_storage")
       .eq("id", purchase.variant_id)
       .eq("document_id", purchase.document_id)
       .maybeSingle();
@@ -66,6 +67,13 @@ export async function POST(req: NextRequest) {
 
     filePath = variant.file_path;
     fileBucket = variant.file_bucket;
+    fileStorage = variant.file_storage ?? "supabase";
+    if (fileStorage === "r2-public") {
+      return NextResponse.json(
+        { error: "The paid level file is not stored in protected storage." },
+        { status: 500 }
+      );
+    }
   }
 
   if (!filePath) {
@@ -75,6 +83,13 @@ export async function POST(req: NextRequest) {
   let downloadUrl: string | null = null;
 
   if (isR2DocumentKey(filePath)) {
+    if (fileStorage === "r2-public") {
+      return NextResponse.json(
+        { error: "The paid document file is not stored in protected storage." },
+        { status: 500 }
+      );
+    }
+
     downloadUrl = await createR2PresignedUrl({
       key: filePath,
       method: "GET",

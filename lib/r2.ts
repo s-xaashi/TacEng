@@ -12,21 +12,82 @@ type R2Config = {
   secretAccessKey: string;
 };
 
-function getR2Config(): R2Config {
+type R2Storage = "private" | "public";
+
+function getR2Config(storage: R2Storage = "private"): R2Config {
   const accountId = process.env.R2_ACCOUNT_ID?.trim();
-  const accessKeyId = process.env.R2_ACCESS_KEY_ID?.trim();
-  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY?.trim();
-  const bucket = process.env.R2_BUCKET_NAME?.trim();
-  const endpoint = (process.env.R2_ENDPOINT?.trim() ||
-    (accountId ? `https://${accountId}.r2.cloudflarestorage.com` : "")).replace(/\/$/, "");
+  const jurisdiction = (process.env.R2_JURISDICTION?.trim().toLowerCase() || "eu");
+
+  // These buckets are created in the EU R2 jurisdiction. Cloudflare requires
+  // jurisdictional buckets to use the jurisdiction-specific S3 endpoint.
+  // If R2_ENDPOINT is still set to the generic endpoint, normalize it here
+  // so the browser presigned PUT is sent to the correct R2 endpoint.
+  const configuredEndpoint = process.env.R2_ENDPOINT?.trim();
+  let endpoint = accountId
+    ? `https://${accountId}.${jurisdiction === "default" ? "" : `${jurisdiction}.`}r2.cloudflarestorage.com`
+    : "";
+
+  if (configuredEndpoint) {
+    try {
+      const parsed = new URL(configuredEndpoint);
+      const genericHost = accountId ? `${accountId}.r2.cloudflarestorage.com` : "";
+      if (parsed.hostname === genericHost && jurisdiction !== "default") {
+        parsed.hostname = `${accountId}.${jurisdiction}.r2.cloudflarestorage.com`;
+      }
+      endpoint = parsed.toString().replace(/\/$/, "");
+    } catch {
+      endpoint = configuredEndpoint.replace(/\/$/, "");
+    }
+  }
+
+  const publicAccessKeyId = process.env.R2_PUBLIC_ACCESS_KEY_ID?.trim();
+  const publicSecretAccessKey = process.env.R2_PUBLIC_SECRET_ACCESS_KEY?.trim();
+
+  const accessKeyId =
+    storage === "public" && publicAccessKeyId && publicSecretAccessKey
+      ? publicAccessKeyId
+      : process.env.R2_ACCESS_KEY_ID?.trim();
+
+  const secretAccessKey =
+    storage === "public" && publicAccessKeyId && publicSecretAccessKey
+      ? publicSecretAccessKey
+      : process.env.R2_SECRET_ACCESS_KEY?.trim();
+
+  const bucket =
+    (storage === "public"
+      ? process.env.R2_PUBLIC_BUCKET_NAME?.trim()
+      : process.env.R2_BUCKET_NAME?.trim()) ||
+    (storage === "private" ? process.env.R2_BUCKET_NAME?.trim() : "");
 
   if (!accountId || !accessKeyId || !secretAccessKey || !bucket || !endpoint) {
     throw new Error(
-      "R2 is not configured. Check R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME and R2_ENDPOINT."
+      storage === "public"
+        ? "Public R2 is not configured. Set R2_PUBLIC_BUCKET_NAME and, if needed, R2_PUBLIC_ACCESS_KEY_ID/R2_PUBLIC_SECRET_ACCESS_KEY."
+        : "R2 is not configured. Check R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME and R2_ENDPOINT."
     );
   }
 
   return { endpoint, bucket, accessKeyId, secretAccessKey };
+}
+
+export function hasPublicR2Delivery() {
+  return Boolean(
+    process.env.R2_PUBLIC_BUCKET_NAME?.trim() &&
+    process.env.R2_PUBLIC_BASE_URL?.trim()
+  );
+}
+
+export function getPublicR2Url(key: string) {
+  if (!isR2DocumentKey(key)) {
+    throw new Error("Invalid R2 document key.");
+  }
+
+  const baseUrl = process.env.R2_PUBLIC_BASE_URL?.trim().replace(/\/$/, "");
+  if (!baseUrl) {
+    throw new Error("R2_PUBLIC_BASE_URL is not configured.");
+  }
+
+  return `${baseUrl}/${encodeObjectKey(key)}`;
 }
 
 function getR2Client(config: R2Config) {
@@ -81,12 +142,15 @@ export async function createR2PresignedUrl(params: {
   method: "GET" | "PUT";
   expiresIn?: number;
   contentType?: string | null;
+  storage?: R2Storage;
+  cacheControl?: string | null;
 }) {
   if (!isR2DocumentKey(params.key)) {
     throw new Error("Invalid R2 document key.");
   }
 
-  const config = getR2Config();
+  const storage = params.storage ?? "private";
+  const config = getR2Config(storage);
   const client = getR2Client(config);
   const expiresIn = Math.max(
     1,
@@ -104,14 +168,21 @@ export async function createR2PresignedUrl(params: {
   );
   url.searchParams.set("X-Amz-Expires", String(expiresIn));
 
-  const headers =
+  // Sign the Content-Type used by the browser PUT. Keep Cache-Control
+  // as an unsigned request header so it cannot cause a SigV4 mismatch.
+  const signedHeaders =
     params.method === "PUT" && params.contentType
       ? { "Content-Type": params.contentType }
       : undefined;
 
-  const signed = await client.sign(url.toString(), {
+  // Pass a Request object to aws4fetch so the signed request and its
+  // headers are constructed together, matching Cloudflare's R2 pattern.
+  const request = new Request(url.toString(), {
     method: params.method,
-    headers,
+    headers: signedHeaders,
+  });
+
+  const signed = await client.sign(request, {
     aws: {
       signQuery: true,
     },
@@ -120,10 +191,13 @@ export async function createR2PresignedUrl(params: {
   return signed.url.toString();
 }
 
-export async function deleteR2Object(key: string) {
+export async function deleteR2Object(
+  key: string,
+  storage: R2Storage = "private"
+) {
   if (!isR2DocumentKey(key)) return;
 
-  const config = getR2Config();
+  const config = getR2Config(storage);
   const client = getR2Client(config);
   const url = `${config.endpoint}/${encodeURIComponent(config.bucket)}/${encodeObjectKey(key)}`;
 

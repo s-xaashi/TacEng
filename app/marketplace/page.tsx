@@ -46,7 +46,7 @@ export default function MarketplacePage() {
         supabase!.from("categories").select("id, name, slug").order("name"),
         supabase!
           .from("documents")
-          .select("id, title, description, title_en, description_en, title_so, description_so, category_id, file_path, thumbnail_path, price, is_free, payment_link, published, download_enabled, product_type, download_count, download_count_adjustment, created_at, updated_at")
+          .select("id, title, description, title_en, description_en, title_so, description_so, category_id, file_path, file_storage, thumbnail_path, price, is_free, payment_link, published, download_enabled, product_type, download_count, download_count_adjustment, created_at, updated_at")
           .eq("published", true)
           .order("created_at", { ascending: false }),
         supabase!.from("product_types").select("id, name, slug").order("name"),

@@ -14,6 +14,7 @@ type DraftVariant = {
   productFile: File | null;
   existingFilePath: string | null;
   existingFileBucket: "free-documents" | "paid-documents" | null;
+  existingFileStorage: "supabase" | "r2-private" | "r2-public" | null;
   existingImages: DocumentImage[];
 };
 
@@ -34,6 +35,7 @@ type FormState = {
   galleryFiles: File[];
   existingThumbnailPath: string | null;
   existingFilePath: string | null;
+  existingFileStorage: "supabase" | "r2-private" | "r2-public" | null;
   existingIsFree: boolean | null;
   variants: DraftVariant[];
   existingGeneralImages: DocumentImage[];
@@ -56,6 +58,7 @@ const emptyForm: FormState = {
   galleryFiles: [],
   existingThumbnailPath: null,
   existingFilePath: null,
+  existingFileStorage: null,
   existingIsFree: null,
   variants: [],
   existingGeneralImages: [],
@@ -94,7 +97,7 @@ export default function DocumentManager() {
     const [{ data: cats }, { data: types }, { data: docs }, { data: images }, { data: reviewRows }] = await Promise.all([
       client.from("categories").select("id, name, slug").order("name"),
       client.from("product_types").select("id, name, slug").order("name"),
-      client.from("documents").select("id, title, description, title_en, description_en, title_so, description_so, category_id, file_path, thumbnail_path, price, is_free, payment_link, published, download_enabled, product_type, download_count, download_count_adjustment, created_at, updated_at").order("created_at", { ascending: false }),
+      client.from("documents").select("id, title, description, title_en, description_en, title_so, description_so, category_id, file_path, file_storage, thumbnail_path, price, is_free, payment_link, published, download_enabled, product_type, download_count, download_count_adjustment, created_at, updated_at").order("created_at", { ascending: false }),
       client.from("document_images").select("id, document_id, variant_id, image_path, alt_text, sort_order, created_at").order("sort_order"),
       client.from("document_reviews").select("*").order("created_at", { ascending: false }),
     ]);
@@ -144,6 +147,7 @@ export default function DocumentManager() {
       galleryFiles: [],
       existingThumbnailPath: doc.thumbnail_path,
       existingFilePath: doc.file_path,
+      existingFileStorage: doc.file_storage ?? "supabase",
       existingIsFree: doc.is_free,
       variants: ((variants ?? []) as DocumentVariant[]).map(v => ({
         id: v.id,
@@ -154,6 +158,7 @@ export default function DocumentManager() {
         productFile: null,
         existingFilePath: v.file_path ?? null,
         existingFileBucket: v.file_bucket ?? null,
+        existingFileStorage: v.file_storage ?? "supabase",
         existingImages: imgs.filter(i => i.variant_id === v.id),
       })),
       existingGeneralImages: imgs.filter(i => !i.variant_id),
@@ -252,7 +257,12 @@ export default function DocumentManager() {
 
     const uploadResponse = await fetch(data.uploadUrl, {
       method: "PUT",
-      headers: { "Content-Type": contentType },
+      headers: {
+        "Content-Type": contentType,
+        ...(data.storage === "public"
+          ? { "Cache-Control": "public, max-age=31536000, immutable" }
+          : {}),
+      },
       body: file,
     });
 
@@ -263,7 +273,10 @@ export default function DocumentManager() {
       );
     }
 
-    return data.key as string;
+    return {
+      key: data.key as string,
+      storage: (data.storage ?? "private") as "private" | "public",
+    };
   }
 
   async function handleSubmit(event: React.FormEvent) {
@@ -343,6 +356,7 @@ export default function DocumentManager() {
         published: form.published,
         thumbnail_path: thumbnailPath,
         file_path: form.existingFilePath,
+        file_storage: form.existingFileStorage ?? "supabase",
       };
 
       if (editing) {
@@ -365,18 +379,24 @@ export default function DocumentManager() {
       }
 
       let filePath = form.existingFilePath;
+      let fileStorage = form.existingFileStorage ?? "supabase";
 
       if (form.productFile) {
-        filePath = await uploadProductFileToR2(
+        const uploaded = await uploadProductFileToR2(
           client,
           form.productFile,
           documentId,
           null
         );
+        filePath = uploaded.key;
+        fileStorage = uploaded.storage === "public" ? "r2-public" : "r2-private";
 
         const { error: filePathError } = await client
           .from("documents")
-          .update({ file_path: filePath })
+          .update({
+            file_path: filePath,
+            file_storage: fileStorage,
+          })
           .eq("id", documentId);
 
         if (filePathError) throw filePathError;
@@ -431,6 +451,7 @@ export default function DocumentManager() {
 
         let variantFilePath = draft.existingFilePath;
         let variantFileBucket = draft.existingFileBucket;
+        let variantFileStorage = draft.existingFileStorage ?? "supabase";
 
         if (
           variantFilePath &&
@@ -454,6 +475,7 @@ export default function DocumentManager() {
               sort_order: index,
               file_path: null,
               file_bucket: desiredBucket,
+              file_storage: "supabase",
             })
             .select("id")
             .single();
@@ -470,13 +492,15 @@ export default function DocumentManager() {
         }
 
         if (draft.productFile) {
-          variantFilePath = await uploadProductFileToR2(
+          const uploaded = await uploadProductFileToR2(
             client,
             draft.productFile,
             documentId,
             variantId
           );
+          variantFilePath = uploaded.key;
           variantFileBucket = desiredBucket;
+          variantFileStorage = uploaded.storage === "public" ? "r2-public" : "r2-private";
         } else if (!variantFilePath && index === 0 && filePath) {
           const mainBucket = form.is_free
             ? "free-documents"
@@ -485,6 +509,7 @@ export default function DocumentManager() {
           if (desiredBucket === mainBucket) {
             variantFilePath = filePath;
             variantFileBucket = mainBucket;
+            variantFileStorage = fileStorage;
           }
         }
 
@@ -510,6 +535,7 @@ export default function DocumentManager() {
           sort_order: index,
           file_path: variantFilePath,
           file_bucket: variantFileBucket,
+          file_storage: variantFileStorage,
         };
 
         const { error: updateError } = await client
@@ -697,6 +723,7 @@ export default function DocumentManager() {
           productFile: null,
           existingFilePath: null,
           existingFileBucket: null,
+          existingFileStorage: null,
           existingImages: [],
         },
       ],

@@ -49,12 +49,12 @@ export async function DELETE(request: Request) {
     const [{ data: document }, { data: variants }] = await Promise.all([
       auth.admin
         .from("documents")
-        .select("id, file_path")
+        .select("id, file_path, file_storage")
         .eq("id", documentId)
         .maybeSingle(),
       auth.admin
         .from("document_variants")
-        .select("id, file_path")
+        .select("id, file_path, file_storage")
         .eq("document_id", documentId),
     ]);
 
@@ -62,14 +62,26 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Document not found." }, { status: 404 });
     }
 
-    const keys = [
-      document.file_path,
-      ...(variants ?? []).map(variant => variant.file_path),
-    ].filter(isR2DocumentKey);
+    const objects = [
+      {
+        key: document.file_path,
+        storage: document.file_storage === "r2-public" ? "public" : "private",
+      },
+      ...(variants ?? []).map(variant => ({
+        key: variant.file_path,
+        storage: variant.file_storage === "r2-public" ? "public" : "private",
+      })),
+    ].filter((object): object is { key: string; storage: "public" | "private" } =>
+      isR2DocumentKey(object.key)
+    );
 
-    await Promise.all(keys.map(key => deleteR2Object(key)));
+    await Promise.all(
+      objects.map(object =>
+        deleteR2Object(object.key, object.storage)
+      )
+    );
 
-    return NextResponse.json({ ok: true, deleted: keys.length });
+    return NextResponse.json({ ok: true, deleted: objects.length });
   } catch (error) {
     console.error("R2 document deletion error", error);
     return NextResponse.json(
