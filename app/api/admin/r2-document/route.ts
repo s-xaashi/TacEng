@@ -139,12 +139,16 @@ export async function POST(request: Request) {
         key: variant.file_path,
         storage: variant.file_storage,
       })),
-    ];
-
-    const stillReferenced = currentObjects.some(object =>
-      object.key === key &&
-      (object.storage === "r2-public" ? "public" : "private") === storage
+    ].filter(
+      (object): object is {
+        key: string;
+        storage: "r2-public" | "r2-private";
+      } =>
+        typeof object.key === "string" &&
+        (object.storage === "r2-public" || object.storage === "r2-private")
     );
+
+    const stillReferenced = currentObjects.some(object => object.key === key);
 
     if (stillReferenced) {
       return NextResponse.json(
