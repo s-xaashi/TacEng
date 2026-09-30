@@ -281,6 +281,26 @@ export default function DocumentManager() {
     };
   }
 
+  async function r2Cleanup(
+    client: NonNullable<ReturnType<typeof getSupabaseClient>>,
+    documentId: string,
+    key: string,
+    storage: "private" | "public"
+  ) {
+    const { data: { session } } = await client.auth.getSession();
+    if (!session?.access_token) throw new Error("Admin session expired.");
+
+    const response = await fetch("/api/admin/r2-document", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Admin-Token": session.access_token },
+      body: JSON.stringify({ documentId, key, storage }),
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      throw new Error(body?.error || "R2 cleanup failed.");
+    }
+  }
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
