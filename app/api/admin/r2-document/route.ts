@@ -6,10 +6,13 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 async function requireAdmin(request: Request) {
-  const authHeader = request.headers.get("authorization") || "";
+  const authHeader =
+    request.headers.get("authorization") ||
+    request.headers.get("x-admin-token") ||
+    "";
   const token = authHeader.startsWith("Bearer ")
     ? authHeader.slice("Bearer ".length).trim()
-    : "";
+    : authHeader.trim();
 
   if (!token) return { error: "Unauthorized.", status: 401 as const };
 
@@ -41,11 +44,6 @@ export async function DELETE(request: Request) {
 
     const body = await request.json().catch(() => null);
     const documentId = typeof body?.documentId === "string" ? body.documentId : "";
-    const key = typeof body?.key === "string" ? body.key : "";
-    const storage =
-      body?.storage === "public" || body?.storage === "private"
-        ? body.storage
-        : null;
 
     if (!documentId) {
       return NextResponse.json({ error: "Document ID is required." }, { status: 400 });
@@ -65,53 +63,6 @@ export async function DELETE(request: Request) {
 
     if (!document) {
       return NextResponse.json({ error: "Document not found." }, { status: 404 });
-    }
-
-    // When a specific key is supplied, this endpoint is also used for
-    // replacement cleanup and upload rollback. Keep it scoped to this
-    // document and never allow deletion of a file still referenced by DB.
-    if (key || storage) {
-      if (!key || !storage || !isR2DocumentKey(key)) {
-        return NextResponse.json({ error: "Invalid R2 object cleanup request." }, { status: 400 });
-      }
-
-      const documentPrefix = `documents/${documentId}/`;
-      if (!key.startsWith(documentPrefix)) {
-        return NextResponse.json({ error: "R2 object does not belong to this document." }, { status: 403 });
-      }
-
-      const currentObjects = [
-        {
-          key: document.file_path,
-          storage: document.file_storage,
-        },
-        ...(variants ?? []).map(variant => ({
-          key: variant.file_path,
-          storage: variant.file_storage,
-        })),
-      ].filter((object): object is {
-        key: string;
-        storage: "supabase" | "r2-public" | "r2-private";
-      } =>
-        typeof object.key === "string" &&
-        ["supabase", "r2-public", "r2-private"].includes(object.storage)
-      );
-
-      const isCurrentReference = currentObjects.some(
-        object =>
-          object.key === key &&
-          (object.storage === "r2-public" ? "public" : "private") === storage
-      );
-
-      if (isCurrentReference) {
-        return NextResponse.json(
-          { error: "Cannot delete an R2 object still referenced by the document." },
-          { status: 409 }
-        );
-      }
-
-      await deleteR2Object(key, storage);
-      return NextResponse.json({ ok: true, deleted: 1 });
     }
 
     const objects = [
@@ -138,6 +89,76 @@ export async function DELETE(request: Request) {
     console.error("R2 document deletion error", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Could not remove R2 files." },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const auth = await requireAdmin(request);
+    if ("error" in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
+    const body = await request.json().catch(() => null);
+    const documentId = typeof body?.documentId === "string" ? body.documentId : "";
+    const key = typeof body?.key === "string" ? body.key : "";
+    const storage =
+      body?.storage === "public" || body?.storage === "private"
+        ? body.storage
+        : null;
+
+    if (!documentId || !key || !storage || !isR2DocumentKey(key)) {
+      return NextResponse.json({ error: "Invalid R2 cleanup request." }, { status: 400 });
+    }
+
+    if (!key.startsWith(`documents/${documentId}/`)) {
+      return NextResponse.json({ error: "R2 object does not belong to this document." }, { status: 403 });
+    }
+
+    const [{ data: document }, { data: variants }] = await Promise.all([
+      auth.admin
+        .from("documents")
+        .select("file_path, file_storage")
+        .eq("id", documentId)
+        .maybeSingle(),
+      auth.admin
+        .from("document_variants")
+        .select("file_path, file_storage")
+        .eq("document_id", documentId),
+    ]);
+
+    if (!document) {
+      return NextResponse.json({ error: "Document not found." }, { status: 404 });
+    }
+
+    const currentObjects = [
+      { key: document.file_path, storage: document.file_storage },
+      ...(variants ?? []).map(variant => ({
+        key: variant.file_path,
+        storage: variant.file_storage,
+      })),
+    ];
+
+    const stillReferenced = currentObjects.some(object =>
+      object.key === key &&
+      (object.storage === "r2-public" ? "public" : "private") === storage
+    );
+
+    if (stillReferenced) {
+      return NextResponse.json(
+        { error: "Cannot clean up an R2 object still referenced by the document." },
+        { status: 409 }
+      );
+    }
+
+    await deleteR2Object(key, storage);
+    return NextResponse.json({ ok: true, deleted: 1 });
+  } catch (error) {
+    console.error("R2 object cleanup error", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Could not clean up R2 object." },
       { status: 500 }
     );
   }
