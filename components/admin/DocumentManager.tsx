@@ -279,6 +279,26 @@ export default function DocumentManager() {
     };
   }
 
+  async function r2Cleanup(
+    client: NonNullable<ReturnType<typeof getSupabaseClient>>,
+    documentId: string,
+    key: string,
+    storage: "private" | "public"
+  ) {
+    const { data: { session } } = await client.auth.getSession();
+    if (!session?.access_token) throw new Error("Admin session expired.");
+
+    const response = await fetch("/api/admin/r2-document", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Admin-Token": session.access_token },
+      body: JSON.stringify({ documentId, key, storage }),
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      throw new Error(body?.error || "R2 cleanup failed.");
+    }
+  }
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
@@ -382,24 +402,56 @@ export default function DocumentManager() {
       let fileStorage = form.existingFileStorage ?? "supabase";
 
       if (form.productFile) {
+        const previousFilePath = form.existingFilePath;
+        const previousFileStorage = form.existingFileStorage ?? "supabase";
+
         const uploaded = await uploadProductFileToR2(
           client,
           form.productFile,
           documentId,
           null
         );
-        filePath = uploaded.key;
-        fileStorage = uploaded.storage === "public" ? "r2-public" : "r2-private";
+        const newFilePath = uploaded.key;
+        const newFileStorage =
+          uploaded.storage === "public" ? "r2-public" : "r2-private";
 
         const { error: filePathError } = await client
           .from("documents")
           .update({
-            file_path: filePath,
-            file_storage: fileStorage,
+            file_path: newFilePath,
+            file_storage: newFileStorage,
           })
           .eq("id", documentId);
 
-        if (filePathError) throw filePathError;
+        if (filePathError) {
+          try {
+            await r2Cleanup(client, documentId, newFilePath, uploaded.storage);
+          } catch (cleanupError) {
+            console.error("Failed to roll back new R2 document file", cleanupError);
+          }
+          throw filePathError;
+        }
+
+        filePath = newFilePath;
+        fileStorage = newFileStorage;
+
+        if (
+          previousFilePath &&
+          previousFilePath !== newFilePath &&
+          (previousFileStorage === "r2-private" ||
+            previousFileStorage === "r2-public")
+        ) {
+          try {
+            await r2Cleanup(
+              client,
+              documentId,
+              previousFilePath,
+              previousFileStorage === "r2-public" ? "public" : "private"
+            );
+          } catch (cleanupError) {
+            console.error("Failed to clean up replaced R2 document file", cleanupError);
+          }
+        }
       }
 
       const existingVariantIds =
@@ -491,16 +543,24 @@ export default function DocumentManager() {
           throw new Error("Could not determine the product option ID.");
         }
 
+        let uploadedVariant: {
+          key: string;
+          storage: "private" | "public";
+        } | null = null;
+        const previousVariantFilePath = variantFilePath;
+        const previousVariantFileStorage = variantFileStorage;
+
         if (draft.productFile) {
-          const uploaded = await uploadProductFileToR2(
+          uploadedVariant = await uploadProductFileToR2(
             client,
             draft.productFile,
             documentId,
             variantId
           );
-          variantFilePath = uploaded.key;
+          variantFilePath = uploadedVariant.key;
           variantFileBucket = desiredBucket;
-          variantFileStorage = uploaded.storage === "public" ? "r2-public" : "r2-private";
+          variantFileStorage =
+            uploadedVariant.storage === "public" ? "r2-public" : "r2-private";
         } else if (!variantFilePath && index === 0 && filePath) {
           const mainBucket = form.is_free
             ? "free-documents"
@@ -543,7 +603,40 @@ export default function DocumentManager() {
           .update(variantPayload)
           .eq("id", variantId);
 
-        if (updateError) throw updateError;
+        if (updateError) {
+          if (uploadedVariant) {
+            try {
+              await r2Cleanup(
+                client,
+                documentId,
+                uploadedVariant.key,
+                uploadedVariant.storage
+              );
+            } catch (cleanupError) {
+              console.error("Failed to roll back new R2 variant file", cleanupError);
+            }
+          }
+          throw updateError;
+        }
+
+        if (
+          uploadedVariant &&
+          previousVariantFilePath &&
+          previousVariantFilePath !== uploadedVariant.key &&
+          (previousVariantFileStorage === "r2-private" ||
+            previousVariantFileStorage === "r2-public")
+        ) {
+          try {
+            await r2Cleanup(
+              client,
+              documentId,
+              previousVariantFilePath,
+              previousVariantFileStorage === "r2-public" ? "public" : "private"
+            );
+          } catch (cleanupError) {
+            console.error("Failed to clean up replaced R2 variant file", cleanupError);
+          }
+        }
 
         await uploadImages(
           client,
