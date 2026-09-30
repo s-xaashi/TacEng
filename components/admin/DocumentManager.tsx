@@ -1,5 +1,7 @@
 "use client";
 
+// R2 replacement cleanup is handled after the new file is referenced.
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { getThumbnailUrl } from "@/lib/supabase/storage";
