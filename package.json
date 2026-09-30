@@ -14,7 +14,8 @@
     "react-dom": "^19.1.4",
     "@supabase/supabase-js": "^2.45.4",
     "server-only": "^0.0.1",
-    "@vercel/analytics": "^2.0.1"
+    "@vercel/analytics": "^2.0.1",
+    "aws4fetch": "^1.0.20"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
