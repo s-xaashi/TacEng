@@ -241,8 +241,13 @@ export default function BuyModal({
               disabled={submitting}
               className="focus-ring rounded-full bg-ink px-6 py-3 text-sm font-medium text-paper hover:bg-ink/85 disabled:opacity-50"
             >
-              {submitting ? t.marketplace.processing : t.marketplace.payNow}
+              {submitting ? t.marketplace.paymentPending : t.marketplace.payNow}
             </button>
+            {submitting && (
+              <p className="text-center text-xs leading-5 text-muted">
+                {t.marketplace.walletPendingInstruction}
+              </p>
+            )}
             <p className="text-center text-xs text-muted">
               {t.marketplace.poweredBySifalo}
             </p>
