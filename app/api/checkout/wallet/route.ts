@@ -85,8 +85,24 @@ export async function POST(req: NextRequest) {
       currency,
     });
 
+    // Keep the provider's failure reason available for diagnostics and
+    // customer-facing errors. Do not log or return account/PIN data.
+    if (result.code !== "601" && result.code !== "603") {
+      console.warn("[Sifalo wallet charge]", {
+        code: result.code,
+        response: result.response ?? null,
+        purchaseId: updated.id,
+      });
+    }
+
     const failureReason =
       result.code === "604" ? "insufficient_balance" : "payment_failed";
+    const providerMessage =
+      result.code === "604"
+        ? null
+        : result.code === "600" && result.response
+          ? result.response
+          : null;
 
     return NextResponse.json({
       purchaseId: updated.id,
@@ -100,7 +116,8 @@ export async function POST(req: NextRequest) {
             ? "Payment successful."
             : result.code === "604"
               ? "Payment failed. Your account balance is not enough for this payment."
-              : "Payment failed. Please check your wallet details and try again.",
+              : providerMessage ?? "Payment failed. Please check your wallet details and try again.",
+      providerMessage,
     });
   } catch (err) {
     return NextResponse.json(
