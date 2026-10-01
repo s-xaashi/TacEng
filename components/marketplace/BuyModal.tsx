@@ -221,7 +221,7 @@ export default function BuyModal({
 
             <div>
               <label htmlFor="account" className="text-sm text-muted">
-                Phone / Account Number
+                {t.marketplace.phoneAccount}
               </label>
               <input
                 id="account"
@@ -254,8 +254,8 @@ export default function BuyModal({
             {walletStatus === "pending" && (
               <>
                 <p className="text-sm font-medium text-ink">{t.marketplace.paymentPending}</p>
-                <p className="mt-2 text-xs text-muted">
-                  Approve the request on your phone if asked.
+                <p className="mt-2 text-xs leading-5 text-muted">
+                  {t.marketplace.walletPendingInstruction}
                 </p>
               </>
             )}
@@ -281,7 +281,7 @@ export default function BuyModal({
                   onClick={retryWallet}
                   className="focus-ring mt-4 rounded-full border border-line px-5 py-2 text-sm text-ink hover:border-ink"
                 >
-                  Try again
+                  {t.marketplace.tryAgain}
                 </button>
               </>
             )}
