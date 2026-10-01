@@ -80,7 +80,7 @@ export default function BuyModal({
     e.preventDefault();
     setError(null);
     if (!account.trim()) {
-      setError("Enter your phone / account number.");
+      setError(t.marketplace.enterAccount);
       return;
     }
 
@@ -97,7 +97,7 @@ export default function BuyModal({
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Payment failed.");
+      if (!res.ok) throw new Error(data.error ?? t.marketplace.paymentFailed);
 
       setPurchaseId(data.purchaseId);
       setScreen("wallet-status");
@@ -113,7 +113,7 @@ export default function BuyModal({
         startPolling(data.purchaseId);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Payment failed.");
+      setError(err instanceof Error ? err.message : t.marketplace.paymentFailed);
     } finally {
       setSubmitting(false);
     }
@@ -129,10 +129,10 @@ export default function BuyModal({
         body: JSON.stringify({ documentId, variantId: variantId ?? undefined }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Could not start checkout.");
+      if (!res.ok) throw new Error(data.error ?? t.marketplace.couldNotStartCheckout);
       window.location.href = data.checkoutUrl;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not start checkout.");
+      setError(err instanceof Error ? err.message : t.marketplace.couldNotStartCheckout);
       setCardLoading(false);
     }
   }
@@ -156,13 +156,13 @@ export default function BuyModal({
       >
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="font-display text-xl text-ink">Complete Payment</h2>
+            <h2 className="font-display text-xl text-ink">{t.marketplace.completePayment}</h2>
             <p className="mt-1 text-sm text-muted">{title}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t.marketplace.close}
             className="focus-ring text-muted hover:text-ink"
           >
             ✕
@@ -178,8 +178,8 @@ export default function BuyModal({
               onClick={() => setScreen("wallet-form")}
               className="focus-ring rounded-xl border border-line p-4 text-left hover:border-ink"
             >
-              <p className="font-medium text-ink">Local Mobile Money / Wallet</p>
-              <p className="mt-1 text-xs text-muted">For Somalia &amp; Somaliland</p>
+              <p className="font-medium text-ink">{t.marketplace.localWallet}</p>
+              <p className="mt-1 text-xs text-muted">{t.marketplace.localWalletDesc}</p>
             </button>
             <button
               type="button"
@@ -188,10 +188,10 @@ export default function BuyModal({
               className="focus-ring rounded-xl border border-line p-4 text-left hover:border-ink disabled:opacity-50"
             >
               <p className="font-medium text-ink">
-                {cardLoading ? "Redirecting…" : "International Card / Hosted Checkout"}
+                {cardLoading ? t.marketplace.redirecting : t.marketplace.internationalCard}
               </p>
               <p className="mt-1 text-xs text-muted">
-                Visa / Mastercard / other supported cards
+                {t.marketplace.cardDesc}
               </p>
             </button>
           </div>
@@ -200,7 +200,7 @@ export default function BuyModal({
         {screen === "wallet-form" && (
           <form onSubmit={handleWalletSubmit} className="mt-6 grid gap-4">
             <div>
-              <label className="text-sm text-muted">Choose payment method</label>
+              <label className="text-sm text-muted">{t.marketplace.choosePaymentMethod}</label>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 {WALLET_OPTIONS.map((opt) => (
                   <button
@@ -229,7 +229,7 @@ export default function BuyModal({
                 required
                 value={account}
                 onChange={(e) => setAccount(e.target.value)}
-                placeholder="e.g. 25261XXXXXXX"
+                placeholder={t.marketplace.accountPlaceholder}
                 className="focus-ring mt-1 w-full rounded-md border border-line bg-white/60 px-3 py-2 text-sm text-ink"
               />
             </div>
@@ -241,10 +241,10 @@ export default function BuyModal({
               disabled={submitting}
               className="focus-ring rounded-full bg-ink px-6 py-3 text-sm font-medium text-paper hover:bg-ink/85 disabled:opacity-50"
             >
-              {submitting ? "Processing…" : "Pay Now"}
+              {submitting ? t.marketplace.processing : t.marketplace.payNow}
             </button>
             <p className="text-center text-xs text-muted">
-              Powered securely by Sifalo Pay
+              {t.marketplace.poweredBySifalo}
             </p>
           </form>
         )}
@@ -253,7 +253,7 @@ export default function BuyModal({
           <div className="mt-6 text-center">
             {walletStatus === "pending" && (
               <>
-                <p className="text-sm text-ink">Payment is being processed…</p>
+                <p className="text-sm font-medium text-ink">{t.marketplace.paymentPending}</p>
                 <p className="mt-2 text-xs text-muted">
                   Approve the request on your phone if asked.
                 </p>
@@ -262,7 +262,7 @@ export default function BuyModal({
             {walletStatus === "paid" && purchaseId && (
               <>
                 <p className="text-sm font-medium text-pine-dark">
-                  Payment successful ✓
+                  {t.marketplace.paymentSuccessful}
                 </p>
                 <div className="mt-4 flex justify-center">
                   <DownloadPurchaseButton purchaseId={purchaseId} />
