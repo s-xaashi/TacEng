@@ -43,6 +43,7 @@ export default function BuyModal({
   const [purchaseId, setPurchaseId] = useState<string | null>(null);
   const [walletStatus, setWalletStatus] = useState<WalletStatus>("pending");
   const [walletFailureReason, setWalletFailureReason] = useState<"insufficient_balance" | "payment_failed" | null>(null);
+  const [walletProviderMessage, setWalletProviderMessage] = useState<string | null>(null);
   const [cardLoading, setCardLoading] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -64,10 +65,12 @@ export default function BuyModal({
         if (data.status === "paid") {
           setWalletStatus("paid");
           setWalletFailureReason(null);
+          setWalletProviderMessage(null);
           if (pollRef.current) clearInterval(pollRef.current);
         } else if (data.status === "failed") {
           setWalletStatus("failed");
           setWalletFailureReason(data.reason === "insufficient_balance" ? "insufficient_balance" : "payment_failed");
+          setWalletProviderMessage(typeof data.providerMessage === "string" ? data.providerMessage : null);
           if (pollRef.current) clearInterval(pollRef.current);
         }
       } catch {
@@ -105,9 +108,11 @@ export default function BuyModal({
       if (data.status === "paid") {
         setWalletStatus("paid");
         setWalletFailureReason(null);
+        setWalletProviderMessage(null);
       } else if (data.status === "failed") {
         setWalletStatus("failed");
         setWalletFailureReason(data.reason === "insufficient_balance" ? "insufficient_balance" : "payment_failed");
+        setWalletProviderMessage(typeof data.providerMessage === "string" ? data.providerMessage : null);
       } else {
         setWalletStatus("pending");
         startPolling(data.purchaseId);
@@ -141,6 +146,7 @@ export default function BuyModal({
     setScreen("wallet-form");
     setWalletStatus("pending");
     setWalletFailureReason(null);
+    setWalletProviderMessage(null);
     setPurchaseId(null);
     setError(null);
   }
@@ -279,7 +285,9 @@ export default function BuyModal({
                 <p className="text-sm text-red-700">
                   {walletFailureReason === "insufficient_balance"
                     ? t.marketplace.walletInsufficient
-                    : t.marketplace.walletFailed}
+                    : walletProviderMessage?.toLowerCase().includes("invalid pin")
+                      ? t.marketplace.walletInvalidPin
+                      : t.marketplace.walletFailed}
                 </p>
                 <button
                   type="button"
