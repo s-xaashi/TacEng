@@ -43,10 +43,16 @@ export async function POST(req: NextRequest) {
         : "payment_failed"
       : null;
 
+  const providerMessage =
+    updated.status === "failed" && verify.code === "600" && verify.response
+      ? verify.response
+      : null;
+
   return NextResponse.json({
     status: updated.status,
     reason,
     code: verify.code,
+    providerMessage,
     message:
       updated.status === "pending"
         ? "Payment is being processed. Please approve it on your phone if requested."
@@ -54,6 +60,6 @@ export async function POST(req: NextRequest) {
           ? "Payment successful."
           : verify.code === "604"
             ? "Payment failed. Your account balance is not enough for this payment."
-            : "Payment failed. Please check your wallet details and try again.",
+            : providerMessage ?? "Payment failed. Please check your wallet details and try again.",
   });
 }

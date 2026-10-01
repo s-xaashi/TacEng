@@ -15,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="so">
       <body className="antialiased">
         <LanguageProvider>{children}</LanguageProvider>
         <Analytics />
