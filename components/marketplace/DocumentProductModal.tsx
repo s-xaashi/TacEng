@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import { getThumbnailUrl } from "@/lib/supabase/storage";
 import type { DocumentReview, DocumentVariant, MarketplaceDocument } from "@/lib/supabase/types";
 import BuyModal from "./BuyModal";
