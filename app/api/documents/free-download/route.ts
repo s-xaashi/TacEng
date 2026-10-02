@@ -15,6 +15,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => null);
     const documentId = typeof body?.documentId === "string" ? body.documentId : "";
+    const variantId = typeof body?.variantId === "string" ? body.variantId : null;
 
     if (!documentId) {
       return NextResponse.json({ error: "documentId is required." }, { status: 400 });
@@ -23,7 +24,9 @@ export async function POST(request: Request) {
     const supabase = getSupabaseAdmin();
     const { data: doc, error: docErr } = await supabase
       .from("documents")
-      .select("id, file_path, file_storage, is_free, published, download_enabled, download_count")
+      .select(
+        "id, file_path, file_storage, is_free, price, published, download_enabled, download_count"
+      )
       .eq("id", documentId)
       .maybeSingle();
 
@@ -42,34 +45,68 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!doc.is_free) {
+    let filePath = doc.file_path;
+    let fileStorage = doc.file_storage ?? "supabase";
+    let fileBucket = doc.is_free ? "free-documents" : "paid-documents";
+    let effectivePrice = Number(doc.price);
+
+    if (variantId) {
+      const { data: variant, error: variantErr } = await supabase
+        .from("document_variants")
+        .select("id, document_id, price, enabled, file_path, file_bucket, file_storage")
+        .eq("id", variantId)
+        .eq("document_id", documentId)
+        .maybeSingle();
+
+      if (variantErr || !variant || !variant.enabled) {
+        return NextResponse.json({ error: "The selected level is no longer available." }, { status: 404 });
+      }
+
+      effectivePrice = Number(variant.price);
+      filePath = variant.file_path;
+      fileBucket = variant.file_bucket;
+      fileStorage = variant.file_storage ?? "supabase";
+    }
+
+    // A document/level is downloadable without payment when its effective
+    // price is zero or below, regardless of the admin "Free/Paid" toggle.
+    // This also covers a paid parent document with a zero-price level.
+    if (effectivePrice > 0) {
       return NextResponse.json(
         { error: "This document requires a purchase before downloading." },
         { status: 403 }
       );
     }
 
-    if (!doc.file_path) {
+    if (!filePath) {
       return NextResponse.json({ error: "Document file not found." }, { status: 404 });
     }
 
     let url: string | null = null;
 
-    if (isR2DocumentKey(doc.file_path)) {
-      if (doc.file_storage === "r2-public") {
-        url = getPublicR2Url(doc.file_path);
+    if (isR2DocumentKey(filePath)) {
+      if (fileStorage === "r2-public") {
+        url = getPublicR2Url(filePath);
       } else {
         url = await createR2PresignedUrl({
-          key: doc.file_path,
+          key: filePath,
           method: "GET",
           expiresIn: SIGNED_URL_TTL_SECONDS,
         });
       }
     } else {
-      const legacy = supabase.storage
-        .from("free-documents")
-        .getPublicUrl(doc.file_path);
-      url = legacy.data.publicUrl;
+      const signed = await supabase.storage
+        .from(fileBucket)
+        .createSignedUrl(filePath, SIGNED_URL_TTL_SECONDS);
+
+      if (!signed.data?.signedUrl) {
+        return NextResponse.json(
+          { error: "Could not generate a download link. Please try again." },
+          { status: 500 }
+        );
+      }
+
+      url = signed.data.signedUrl;
     }
 
     if (!url) {
@@ -93,7 +130,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       url,
       expiresIn:
-        isR2DocumentKey(doc.file_path) && doc.file_storage !== "r2-public"
+        isR2DocumentKey(filePath) && fileStorage !== "r2-public"
           ? SIGNED_URL_TTL_SECONDS
           : null,
     });

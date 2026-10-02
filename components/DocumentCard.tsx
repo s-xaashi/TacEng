@@ -62,7 +62,7 @@ export default function DocumentCard({
       const response = await fetch("/api/documents/free-download", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ documentId: doc.id }),
+        body: JSON.stringify({ documentId: doc.id, variantId: activeVariant?.id ?? undefined }),
       });
       const data = await response.json().catch(() => null);
       if (!response.ok || !data?.url) {

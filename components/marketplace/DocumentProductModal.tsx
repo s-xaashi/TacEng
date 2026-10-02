@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
-import { getFreeDocumentUrl, getThumbnailUrl } from "@/lib/supabase/storage";
+import { getThumbnailUrl } from "@/lib/supabase/storage";
 import type { DocumentReview, DocumentVariant, MarketplaceDocument } from "@/lib/supabase/types";
 import BuyModal from "./BuyModal";
 import { useLanguage } from "@/components/LanguageProvider";
@@ -79,14 +79,20 @@ export default function DocumentProductModal({
       return;
     }
 
-    const filePath = selectedVariant?.file_path ?? doc.file_path;
-    const fileBucket = selectedVariant?.file_bucket ?? (doc.is_free ? "free-documents" : "paid-documents");
-    if (!filePath || fileBucket !== "free-documents") return;
-
-    const client = getSupabaseClient();
-    if (client) await client.rpc("increment_download_count", { doc_id: doc.id });
-    const url = getFreeDocumentUrl(filePath);
-    if (url) window.open(url, "_blank", "noopener,noreferrer");
+    const response = await fetch("/api/documents/free-download", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        documentId: doc.id,
+        variantId: selectedVariant?.id ?? undefined,
+      }),
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !data?.url) {
+      console.error("Free document download failed", data?.error ?? "Download failed.");
+      return;
+    }
+    window.open(data.url, "_blank", "noopener,noreferrer");
   }
 
   async function submitReview(event: React.FormEvent) {
