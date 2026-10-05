@@ -4,8 +4,7 @@ import "./globals.css";
 import LanguageProvider from "@/components/LanguageProvider";
 
 const siteUrl = "https://salmaan.site";
-const profileImage = `${siteUrl}/images/profile.jpg`;
-const favicon = `${siteUrl}/images/E46A9831-DB98-40B0-9EBB-7027F45DF80F.png`;
+const profileImage = "https://salmaan.site/images/profile.jpg";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -14,14 +13,6 @@ export const metadata: Metadata = {
     "The portfolio of Salmaan Mukhtaar Xaashi, a Computer Science student at the University of Hargeisa focused on web development, programming, design, and AI-driven digital experiences.",
   alternates: {
     canonical: "/",
-  },
-  icons: {
-    icon: [
-      {
-        url: favicon,
-        type: "image/png",
-      },
-    ],
   },
   openGraph: {
     type: "website",
