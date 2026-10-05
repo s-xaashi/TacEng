@@ -15,6 +15,23 @@ import Highlight from "@/components/Highlight";
 
 export const dynamic = "force-dynamic";
 
+const personJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "@id": "https://salmaan.site/#person",
+  name: "Salmaan Mukhtaar Xaashi",
+  url: "https://salmaan.site/",
+  image: "https://salmaan.site/images/profile.jpg",
+  jobTitle: "Computer Science Student",
+  description:
+    "Computer Science student at the University of Hargeisa focused on web development, programming, design, and AI-driven digital experiences.",
+  affiliation: {
+    "@type": "EducationalOrganization",
+    name: "University of Hargeisa",
+  },
+  sameAs: ["https://github.com/s-xaashi"],
+};
+
 export default function Home(){
   const sections=[
     <Highlight key="highlight"/>,
@@ -28,5 +45,17 @@ export default function Home(){
     <Contact key="contact"/>,
     <Testimonials key="testimonials"/>
   ];
-  return <main><Navbar/><Hero/>{sections.map((section,index)=><ScrollReveal key={index}>{section}</ScrollReveal>)}<Footer/></main>
+
+  return (
+    <main>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(personJsonLd) }}
+      />
+      <Navbar/>
+      <Hero/>
+      {sections.map((section,index)=><ScrollReveal key={index}>{section}</ScrollReveal>)}
+      <Footer/>
+    </main>
+  );
 }
