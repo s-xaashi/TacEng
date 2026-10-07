@@ -194,16 +194,16 @@ export default function CouponManager() {
 
       <form onSubmit={save} className="mt-5 grid min-w-0 gap-4 overflow-visible rounded-2xl border border-line/70 bg-[rgba(255,245,233,.025)] p-4 sm:grid-cols-2">
         <div className="min-w-0">
-          <label className="block min-w-0"><span className="text-sm text-muted">Coupon code</span><input required maxLength={80} value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} placeholder="e.g. WELCOME20" className="coupon-admin-input mt-1" /></label>
+          <label className="block min-w-0"><span className="text-sm text-muted">Coupon code</span><input required maxLength={80} value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} placeholder="e.g. WELCOME20" className="mt-1 block w-full min-w-0 max-w-full box-border min-h-11 rounded-xl border border-line bg-transparent px-3 py-2.5 text-base leading-5 text-ink outline-none placeholder:text-muted focus:border-red-bright focus:ring-2 focus:ring-red-bright/15" /></label>
         </div>
 
         <div className="min-w-0">
-          <label className="block min-w-0"><span className="text-sm text-muted">Discount type</span><select value={form.discountType} onChange={e => setForm(f => ({ ...f, discountType: e.target.value as FormState["discountType"] }))} className="coupon-admin-input mt-1"><option value="percentage">Percentage discount</option><option value="full">Full discount (free)</option></select></label>
+          <label className="block min-w-0"><span className="text-sm text-muted">Discount type</span><select value={form.discountType} onChange={e => setForm(f => ({ ...f, discountType: e.target.value as FormState["discountType"] }))} className="mt-1 block w-full min-w-0 max-w-full box-border min-h-11 rounded-xl border border-line bg-transparent px-3 py-2.5 text-base leading-5 text-ink outline-none placeholder:text-muted focus:border-red-bright focus:ring-2 focus:ring-red-bright/15"><option value="percentage">Percentage discount</option><option value="full">Full discount (free)</option></select></label>
         </div>
 
         {form.discountType === "percentage" && (
           <div className="min-w-0">
-            <label className="block min-w-0"><span className="text-sm text-muted">Discount percentage</span><input required min="0.01" max="100" step="0.01" type="number" value={form.discountPercent} onChange={e => setForm(f => ({ ...f, discountPercent: e.target.value }))} className="coupon-admin-input mt-1" /></label>
+            <label className="block min-w-0"><span className="text-sm text-muted">Discount percentage</span><input required min="0.01" max="100" step="0.01" type="number" value={form.discountPercent} onChange={e => setForm(f => ({ ...f, discountPercent: e.target.value }))} className="mt-1 block w-full min-w-0 max-w-full box-border min-h-11 rounded-xl border border-line bg-transparent px-3 py-2.5 text-base leading-5 text-ink outline-none placeholder:text-muted focus:border-red-bright focus:ring-2 focus:ring-red-bright/15" /></label>
           </div>
         )}
 
@@ -255,8 +255,8 @@ export default function CouponManager() {
         </div>
 
         <div className="grid min-w-0 gap-4 sm:grid-cols-2 sm:col-span-2">
-          <label className="block min-w-0"><span className="text-sm text-muted">Starts (optional)</span><input type="datetime-local" value={form.startsAt} onChange={e => setForm(f => ({ ...f, startsAt: e.target.value }))} className="coupon-admin-input mt-1" /></label>
-          <label className="block min-w-0"><span className="text-sm text-muted">Expires (optional)</span><input type="datetime-local" value={form.expiresAt} onChange={e => setForm(f => ({ ...f, expiresAt: e.target.value }))} className="coupon-admin-input mt-1" /></label>
+          <label className="block min-w-0"><span className="text-sm text-muted">Starts (optional)</span><input type="datetime-local" value={form.startsAt} onChange={e => setForm(f => ({ ...f, startsAt: e.target.value }))} className="mt-1 block w-full min-w-0 max-w-full box-border min-h-11 rounded-xl border border-line bg-transparent px-3 py-2.5 text-base leading-5 text-ink outline-none placeholder:text-muted focus:border-red-bright focus:ring-2 focus:ring-red-bright/15" /></label>
+          <label className="block min-w-0"><span className="text-sm text-muted">Expires (optional)</span><input type="datetime-local" value={form.expiresAt} onChange={e => setForm(f => ({ ...f, expiresAt: e.target.value }))} className="mt-1 block w-full min-w-0 max-w-full box-border min-h-11 rounded-xl border border-line bg-transparent px-3 py-2.5 text-base leading-5 text-ink outline-none placeholder:text-muted focus:border-red-bright focus:ring-2 focus:ring-red-bright/15" /></label>
         </div>
 
         <div className="min-w-0 sm:col-span-2">
