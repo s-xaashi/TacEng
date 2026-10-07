@@ -79,7 +79,18 @@ export default function BuyModal({
         body: JSON.stringify({ documentId, variantId: variantId ?? undefined, code }),
       });
       const data = await res.json().catch(() => null);
-      if (!res.ok || !data?.valid) throw new Error(data?.error ?? t.marketplace.couponValidationError);
+      if (!res.ok || !data?.valid) {
+        const couponErrors: Record<string, string> = {
+          missing: t.marketplace.couponEnter,
+          invalid: t.marketplace.couponInvalid,
+          inactive: t.marketplace.couponInactive,
+          not_started: t.marketplace.couponNotStarted,
+          expired: t.marketplace.couponExpired,
+          not_applicable: t.marketplace.couponNotApplicable,
+          server_error: t.marketplace.couponValidationError,
+        };
+        throw new Error(couponErrors[data?.code] ?? t.marketplace.couponValidationError);
+      }
       setCouponQuote({
         discountType: data.discountType, discountPercent: data.discountPercent,
         originalAmount: Number(data.originalAmount), discountAmount: Number(data.discountAmount),
