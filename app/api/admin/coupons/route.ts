@@ -46,7 +46,7 @@ function parseCoupon(input: CouponInput) {
   }
 
   const discountPercent = discountType === "percentage" ? Number(input.discountPercent) : null;
-  if (discountType === "percentage" && (!Number.isFinite(discountPercent) || discountPercent <= 0 || discountPercent > 100)) {
+  if (discountType === "percentage" && (!Number.isFinite(discountPercent!) || discountPercent! <= 0 || discountPercent! > 100)) {
     throw new Error("Percentage must be greater than 0 and no more than 100.");
   }
 
