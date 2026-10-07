@@ -57,11 +57,16 @@ export default function DownloadPurchaseButton({
         return;
       }
 
-      if (active) setShareSupported(true);
-
       try {
         const file = await getDocumentFile("prepare");
-        if (active) setPreparedFile(file);
+        if (!navigator.canShare({ files: [file] })) {
+          if (active) setShareSupported(false);
+          return;
+        }
+        if (active) {
+          setShareSupported(true);
+          setPreparedFile(file);
+        }
       } catch {
         if (active) setPrepareError(true);
       }
@@ -103,6 +108,11 @@ export default function DownloadPurchaseButton({
       return;
     }
 
+    if (!navigator.canShare?.({ files: [preparedFile] })) {
+      setError(t.marketplace.shareNotSupported);
+      return;
+    }
+
     setLoading("share");
 
     try {
@@ -115,7 +125,11 @@ export default function DownloadPurchaseButton({
         })
         .catch((err: unknown) => {
           if (err instanceof DOMException && err.name === "AbortError") return;
-          setError(err instanceof Error ? err.message : t.marketplace.shareFailed);
+          if (err instanceof DOMException && (err.name === "DataError" || err.name === "NotAllowedError" || err.name === "TypeError")) {
+            setError(t.marketplace.shareNotSupported);
+            return;
+          }
+          setError(t.marketplace.shareFailed);
         })
         .finally(() => setLoading(null));
     } catch (err) {
