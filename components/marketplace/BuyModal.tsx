@@ -71,7 +71,7 @@ export default function BuyModal({
   async function applyCoupon() {
     const code = couponCode.trim();
     setCouponError(null);
-    if (!code) { setCouponError("Enter a coupon code."); return; }
+    if (!code) { setCouponError(t.marketplace.couponEnter); return; }
     setCouponLoading(true);
     try {
       const res = await fetch("/api/coupons/validate", {
@@ -79,7 +79,7 @@ export default function BuyModal({
         body: JSON.stringify({ documentId, variantId: variantId ?? undefined, code }),
       });
       const data = await res.json().catch(() => null);
-      if (!res.ok || !data?.valid) throw new Error(data?.error ?? "We couldn't validate the coupon. Please try again.");
+      if (!res.ok || !data?.valid) throw new Error(data?.error ?? t.marketplace.couponValidationError);
       setCouponQuote({
         discountType: data.discountType, discountPercent: data.discountPercent,
         originalAmount: Number(data.originalAmount), discountAmount: Number(data.discountAmount),
@@ -156,18 +156,18 @@ export default function BuyModal({
         <div className="mt-4">
           {couponQuote ? (
             <div className="rounded-xl border border-line/70 p-3">
-              <div className="flex items-center justify-between text-sm text-muted"><span>Original</span><span className="line-through">${couponQuote.originalAmount.toFixed(2)}</span></div>
-              <div className="mt-1 flex items-center justify-between text-sm text-pine-dark"><span>Discount</span><span>- ${couponQuote.discountAmount.toFixed(2)}{couponQuote.discountType === "percentage" && couponQuote.discountPercent ? " (" + couponQuote.discountPercent + "%)" : ""}</span></div>
-              <div className="mt-2 flex items-center justify-between border-t border-line pt-2 font-display text-2xl text-ink"><span>Total</span><span>${displayedAmount.toFixed(2)}</span></div>
-              <button type="button" onClick={removeCoupon} className="mt-2 text-xs text-muted underline">Remove coupon</button>
+              <div className="flex items-center justify-between text-sm text-muted"><span>{t.marketplace.couponOriginal}</span><span className="line-through">${couponQuote.originalAmount.toFixed(2)}</span></div>
+              <div className="mt-1 flex items-center justify-between text-sm text-pine-dark"><span>{t.marketplace.couponDiscount}</span><span>- ${couponQuote.discountAmount.toFixed(2)}{couponQuote.discountType === "percentage" && couponQuote.discountPercent ? " (" + couponQuote.discountPercent + "%)" : ""}</span></div>
+              <div className="mt-2 flex items-center justify-between border-t border-line pt-2 font-display text-2xl text-ink"><span>{t.marketplace.couponTotal}</span><span>${displayedAmount.toFixed(2)}</span></div>
+              <button type="button" onClick={removeCoupon} className="mt-2 text-xs text-muted underline">{t.marketplace.couponRemove}</button>
             </div>
           ) : <p className="font-display text-3xl text-ink">${price.toFixed(2)}</p>}
         </div>
 
         <div className="mt-5">
           <div className="flex gap-2">
-            <input value={couponCode} onChange={e => setCouponCode(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); applyCoupon(); } }} placeholder="Coupon code" maxLength={80} className="focus-ring min-w-0 flex-1 rounded-lg border border-line bg-white/60 px-3 py-2 text-sm text-ink" />
-            <button type="button" onClick={applyCoupon} disabled={couponLoading} className="focus-ring rounded-lg border border-line px-4 py-2 text-sm text-ink disabled:opacity-50">{couponLoading ? "…" : "Apply"}</button>
+            <input value={couponCode} onChange={e => setCouponCode(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); applyCoupon(); } }} placeholder={t.marketplace.couponCode} maxLength={80} className="focus-ring min-w-0 flex-1 rounded-lg border border-line bg-white/60 px-3 py-2 text-sm text-ink" />
+            <button type="button" onClick={applyCoupon} disabled={couponLoading} className="focus-ring rounded-lg border border-line px-4 py-2 text-sm text-ink disabled:opacity-50"{couponLoading ? "…" : t.marketplace.couponApply}</button>
           </div>
           {couponError && <p className="mt-2 text-xs text-red-700">{couponError}</p>}
         </div>
@@ -175,7 +175,7 @@ export default function BuyModal({
         {screen === "method" && (
           <div className="mt-6 grid gap-3">
             {couponQuote?.finalAmount === 0 ? (
-              <button type="button" onClick={handleCardCheckout} disabled={cardLoading} className="focus-ring rounded-full bg-ink px-6 py-3 text-sm font-medium text-paper disabled:opacity-50">{cardLoading ? "Preparing download…" : "Download now — free"}</button>
+              <button type="button" onClick={handleCardCheckout} disabled={cardLoading} className="focus-ring rounded-full bg-ink px-6 py-3 text-sm font-medium text-paper disabled:opacity-50">{cardLoading ? t.marketplace.couponPreparing : t.marketplace.couponDownloadFree}</button>
             ) : (
               <>
                 <button type="button" onClick={() => setScreen("wallet-form")} className="focus-ring rounded-xl border border-line p-4 text-left hover:border-ink"><p className="font-medium text-ink">{t.marketplace.localWallet}</p><p className="mt-1 text-xs text-muted">{t.marketplace.localWalletDesc}</p></button>
@@ -206,7 +206,7 @@ export default function BuyModal({
         )}
 
         {screen === "coupon-success" && purchaseId && (
-          <div className="mt-6 text-center"><p className="text-sm font-medium text-pine-dark">Coupon applied — your document is free.</p><div className="mt-4 flex justify-center"><DownloadPurchaseButton purchaseId={purchaseId} /></div></div>
+          <div className="mt-6 text-center"><p className="text-sm font-medium text-pine-dark">{t.marketplace.couponAppliedFree}</p><div className="mt-4 flex justify-center"><DownloadPurchaseButton purchaseId={purchaseId} /></div></div>
         )}
       </div>
     </div>
