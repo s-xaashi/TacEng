@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLanguage } from "@/components/LanguageProvider";
 
 export default function DownloadPurchaseButton({
@@ -10,13 +10,16 @@ export default function DownloadPurchaseButton({
 }) {
   const { t } = useLanguage();
   const [loading, setLoading] = useState<"download" | "share" | null>(null);
+  const [preparedFile, setPreparedFile] = useState<File | null>(null);
+  const [shareSupported, setShareSupported] = useState<boolean | null>(null);
+  const [prepareError, setPrepareError] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function getDocumentFile() {
+  async function getDocumentFile(mode: "stream" | "prepare" = "stream") {
     const res = await fetch("/api/documents/download", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ purchaseId, mode: "stream" }),
+      body: JSON.stringify({ purchaseId, mode }),
     });
 
     if (!res.ok) {
@@ -36,12 +39,47 @@ export default function DownloadPurchaseButton({
     });
   }
 
+  useEffect(() => {
+    let active = true;
+
+    async function prepareShareFile() {
+      if (
+        typeof navigator.share !== "function" ||
+        typeof navigator.canShare !== "function"
+      ) {
+        if (active) setShareSupported(false);
+        return;
+      }
+
+      const testFile = new File([""], "document.pdf", { type: "application/pdf" });
+      if (!navigator.canShare({ files: [testFile] })) {
+        if (active) setShareSupported(false);
+        return;
+      }
+
+      if (active) setShareSupported(true);
+
+      try {
+        const file = await getDocumentFile("prepare");
+        if (active) setPreparedFile(file);
+      } catch {
+        if (active) setPrepareError(true);
+      }
+    }
+
+    void prepareShareFile();
+
+    return () => {
+      active = false;
+    };
+  }, [purchaseId]);
+
   async function handleDownload() {
     setLoading("download");
     setError(null);
 
     try {
-      const file = await getDocumentFile();
+      const file = preparedFile ?? await getDocumentFile();
       const url = URL.createObjectURL(file);
       const anchor = document.createElement("a");
       anchor.href = url;
@@ -57,32 +95,30 @@ export default function DownloadPurchaseButton({
     }
   }
 
-  async function handleShare() {
-    setLoading("share");
+  function handleShare() {
     setError(null);
 
+    if (!preparedFile) {
+      setError(prepareError ? t.marketplace.shareFailed : t.marketplace.preparingDocument);
+      return;
+    }
+
+    setLoading("share");
+
     try {
-      const file = await getDocumentFile();
-
-      if (
-        typeof navigator.share !== "function" ||
-        typeof navigator.canShare !== "function" ||
-        !navigator.canShare({ files: [file] })
-      ) {
-        setError(t.marketplace.shareNotSupported);
-        return;
-      }
-
-      await navigator.share({
-        title: file.name.replace(/\.pdf$/i, ""),
-        files: [file],
+      // The file is prepared before this click so navigator.share() retains
+      // the required transient user activation.
+      void navigator.share({
+        title: preparedFile.name.replace(/\.pdf$/i, ""),
+        files: [preparedFile],
       });
     } catch (err) {
-      if (err instanceof DOMException && err.name === "AbortError") return;
       setError(err instanceof Error ? err.message : t.marketplace.shareFailed);
-    } finally {
       setLoading(null);
+      return;
     }
+
+    setTimeout(() => setLoading(null), 500);
   }
 
   return (
@@ -96,14 +132,18 @@ export default function DownloadPurchaseButton({
         {loading === "download" ? t.marketplace.preparingDocument : t.marketplace.downloadDocument}
       </button>
 
-      <button
-        type="button"
-        onClick={handleShare}
-        disabled={loading !== null}
-        className="focus-ring rounded-full border border-line bg-paper px-6 py-3 text-sm font-medium text-ink hover:border-ink disabled:opacity-50"
-      >
-        {loading === "share" ? t.marketplace.sharingDocument : t.marketplace.shareDocument}
-      </button>
+      {shareSupported !== false && (
+        <button
+          type="button"
+          onClick={handleShare}
+          disabled={loading !== null || !preparedFile}
+          className="focus-ring rounded-full border border-line bg-paper px-6 py-3 text-sm font-medium text-ink hover:border-ink disabled:opacity-50"
+        >
+          {loading === "share" || !preparedFile
+            ? t.marketplace.sharingDocument
+            : t.marketplace.shareDocument}
+        </button>
+      )}
 
       {error && <p className="text-sm text-red-700 sm:col-span-2">{error}</p>}
     </div>
