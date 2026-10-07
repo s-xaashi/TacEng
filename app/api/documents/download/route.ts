@@ -6,7 +6,7 @@ import { createR2PresignedUrl, isR2DocumentKey } from "@/lib/r2";
 const SIGNED_URL_TTL_SECONDS = 5 * 60; // short-lived, per spec
 
 export async function POST(req: NextRequest) {
-  let body: { purchaseId?: string };
+  let body: { purchaseId?: string; mode?: "url" | "stream" | "prepare" };
   try {
     body = await req.json();
   } catch {
@@ -110,10 +110,62 @@ export async function POST(req: NextRequest) {
     downloadUrl = signed.signedUrl;
   }
 
-  await supabase
-    .from("documents")
-    .update({ download_count: (doc.download_count ?? 0) + 1 })
-    .eq("id", doc.id);
+  if (body.mode !== "prepare") {
+    await supabase
+      .from("documents")
+      .update({ download_count: (doc.download_count ?? 0) + 1 })
+      .eq("id", doc.id);
+  }
+
+  if (body.mode === "stream" || body.mode === "prepare") {
+    try {
+      const fileResponse = await fetch(downloadUrl, { cache: "no-store" });
+
+      if (!fileResponse.ok || !fileResponse.body) {
+        return NextResponse.json(
+          { error: "Could not retrieve the document file. Please try again." },
+          { status: 502 }
+        );
+      }
+
+      const pathName = filePath.split("/").pop() ?? "document";
+      const fileName = pathName
+        .replace(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i, "")
+        .replace(/["\\\r\n]/g, "")
+        .slice(0, 180) || "document";
+      const extension = fileName.match(/\.([a-z0-9]{1,10})$/i)?.[1]?.toLowerCase();
+      const mimeByExtension: Record<string, string> = {
+        pdf: "application/pdf",
+        xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        xls: "application/vnd.ms-excel",
+        csv: "text/csv",
+        docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        doc: "application/msword",
+        pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        ppt: "application/vnd.ms-powerpoint",
+        zip: "application/zip",
+        txt: "text/plain",
+      };
+      const contentType = fileResponse.headers.get("Content-Type") ||
+        (extension ? mimeByExtension[extension] : undefined) ||
+        "application/octet-stream";
+
+      return new NextResponse(fileResponse.body, {
+        status: 200,
+        headers: {
+          "Content-Type": contentType,
+          "Content-Disposition": `attachment; filename="${fileName}"`,
+          "Cache-Control": "private, no-store, max-age=0",
+          "X-Content-Type-Options": "nosniff",
+        },
+      });
+    } catch {
+      return NextResponse.json(
+        { error: "Could not retrieve the document file. Please try again." },
+        { status: 502 }
+      );
+    }
+  }
 
   return NextResponse.json({ url: downloadUrl, expiresIn: SIGNED_URL_TTL_SECONDS });
 }

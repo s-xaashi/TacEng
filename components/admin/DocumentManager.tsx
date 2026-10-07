@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { getThumbnailUrl } from "@/lib/supabase/storage";
 import type { Category, DocumentImage, DocumentReview, DocumentVariant, MarketplaceDocument, ProductType } from "@/lib/supabase/types";
+import CouponManager from "./CouponManager";
 
 type DraftVariant = {
   id?: string;
@@ -1357,6 +1358,8 @@ export default function DocumentManager() {
           </div>
         )}
       </div>
+
+      <CouponManager />
 
       <style jsx>{`
         .admin-input { width: 100%; border: 1px solid var(--line); border-radius: .65rem; background: rgba(255,255,255,.6); padding: .65rem .75rem; font-size: .875rem; color: var(--ink); }
