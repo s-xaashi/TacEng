@@ -6,7 +6,7 @@ import { createR2PresignedUrl, isR2DocumentKey } from "@/lib/r2";
 const SIGNED_URL_TTL_SECONDS = 5 * 60; // short-lived, per spec
 
 export async function POST(req: NextRequest) {
-  let body: { purchaseId?: string };
+  let body: { purchaseId?: string; mode?: "url" | "stream" };
   try {
     body = await req.json();
   } catch {
@@ -114,6 +114,41 @@ export async function POST(req: NextRequest) {
     .from("documents")
     .update({ download_count: (doc.download_count ?? 0) + 1 })
     .eq("id", doc.id);
+
+  if (body.mode === "stream") {
+    try {
+      const fileResponse = await fetch(downloadUrl, { cache: "no-store" });
+
+      if (!fileResponse.ok || !fileResponse.body) {
+        return NextResponse.json(
+          { error: "Could not retrieve the document file. Please try again." },
+          { status: 502 }
+        );
+      }
+
+      const pathName = filePath.split("/").pop() ?? "document.pdf";
+      const fileName = pathName
+        .replace(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i, "")
+        .replace(/["\\\r\n]/g, "")
+        .slice(0, 180) || "document.pdf";
+      const finalFileName = /\.pdf$/i.test(fileName) ? fileName : `${fileName}.pdf`;
+
+      return new NextResponse(fileResponse.body, {
+        status: 200,
+        headers: {
+          "Content-Type": fileResponse.headers.get("Content-Type") || "application/pdf",
+          "Content-Disposition": `attachment; filename="${finalFileName}"`,
+          "Cache-Control": "private, no-store, max-age=0",
+          "X-Content-Type-Options": "nosniff",
+        },
+      });
+    } catch {
+      return NextResponse.json(
+        { error: "Could not retrieve the document file. Please try again." },
+        { status: 502 }
+      );
+    }
+  }
 
   return NextResponse.json({ url: downloadUrl, expiresIn: SIGNED_URL_TTL_SECONDS });
 }
