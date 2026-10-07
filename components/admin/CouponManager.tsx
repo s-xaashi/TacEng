@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 type Product = {
@@ -183,7 +183,7 @@ export default function CouponManager() {
   }
 
   return (
-    <section className="mt-10 min-w-0 rounded-2xl border border-line p-4 sm:p-5">
+    <section className="mt-10 min-w-0 overflow-visible rounded-2xl border border-line bg-[rgba(33,11,12,.34)] p-4 sm:p-5">
       <div className="flex min-w-0 items-start justify-between gap-4">
         <div className="min-w-0">
           <h3 className="font-display text-xl text-ink">Coupons</h3>
@@ -192,18 +192,18 @@ export default function CouponManager() {
         {form.id && <button type="button" onClick={reset} className="focus-ring shrink-0 rounded-full border border-line px-4 py-2 text-xs text-ink">Cancel</button>}
       </div>
 
-      <form onSubmit={save} className="mt-5 grid min-w-0 gap-4 rounded-2xl border border-line/70 p-4 sm:grid-cols-2">
+      <form onSubmit={save} className="mt-5 grid min-w-0 gap-4 overflow-visible rounded-2xl border border-line/70 bg-[rgba(255,245,233,.025)] p-4 sm:grid-cols-2">
         <div className="min-w-0">
-          <label className="block min-w-0"><span className="text-sm text-muted">Coupon code</span><input required maxLength={80} value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} placeholder="e.g. WELCOME20" className="admin-input mt-1 box-border min-w-0 max-w-full" /></label>
+          <label className="block min-w-0"><span className="text-sm text-muted">Coupon code</span><input required maxLength={80} value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} placeholder="e.g. WELCOME20" className="coupon-admin-input mt-1" /></label>
         </div>
 
         <div className="min-w-0">
-          <label className="block min-w-0"><span className="text-sm text-muted">Discount type</span><select value={form.discountType} onChange={e => setForm(f => ({ ...f, discountType: e.target.value as FormState["discountType"] }))} className="admin-input mt-1 box-border min-w-0 max-w-full"><option value="percentage">Percentage discount</option><option value="full">Full discount (free)</option></select></label>
+          <label className="block min-w-0"><span className="text-sm text-muted">Discount type</span><select value={form.discountType} onChange={e => setForm(f => ({ ...f, discountType: e.target.value as FormState["discountType"] }))} className="coupon-admin-input mt-1"><option value="percentage">Percentage discount</option><option value="full">Full discount (free)</option></select></label>
         </div>
 
         {form.discountType === "percentage" && (
           <div className="min-w-0">
-            <label className="block min-w-0"><span className="text-sm text-muted">Discount percentage</span><input required min="0.01" max="100" step="0.01" type="number" value={form.discountPercent} onChange={e => setForm(f => ({ ...f, discountPercent: e.target.value }))} className="admin-input mt-1 box-border min-w-0 max-w-full" /></label>
+            <label className="block min-w-0"><span className="text-sm text-muted">Discount percentage</span><input required min="0.01" max="100" step="0.01" type="number" value={form.discountPercent} onChange={e => setForm(f => ({ ...f, discountPercent: e.target.value }))} className="coupon-admin-input mt-1" /></label>
           </div>
         )}
 
@@ -215,14 +215,14 @@ export default function CouponManager() {
         <div className="min-w-0 sm:col-span-2">
           <span className="text-sm text-muted">Products</span>
           <div className="relative mt-1">
-            <button type="button" onClick={() => setProductMenuOpen(open => !open)} className="focus-ring flex min-h-11 w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-line bg-transparent px-3 py-2 text-left text-sm text-ink">
+            <button type="button" onClick={() => setProductMenuOpen(open => !open)} className="focus-ring flex min-h-11 w-full min-w-0 box-border items-center justify-between gap-3 rounded-xl border border-line bg-transparent px-3 py-2 text-left text-sm text-ink transition-colors hover:border-[rgba(255,245,233,.28)]">
               <span className="min-w-0 truncate">{selectedLabel}</span>
               <span className="shrink-0 text-muted">{productMenuOpen ? "⌃" : "⌄"}</span>
             </button>
 
             {productMenuOpen && (
-              <div className="absolute left-0 right-0 z-30 mt-2 max-h-64 overflow-y-auto rounded-xl border border-line bg-[var(--paper)] p-2 shadow-lg">
-                <label className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm text-ink hover:bg-black/5">
+              <div className="mt-2 max-h-64 overflow-y-auto rounded-xl border border-line bg-[rgba(33,11,12,.98)] p-2 shadow-[0_18px_45px_rgba(0,0,0,.45)] backdrop-blur-xl">
+                <label className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm text-ink hover:bg-[rgba(255,245,233,.06)]">
                   <input
                     type="checkbox"
                     checked={form.appliesToAll}
@@ -234,7 +234,7 @@ export default function CouponManager() {
                 {products.length === 0 ? (
                   <p className="px-3 py-3 text-xs text-muted">No published products available.</p>
                 ) : products.map(product => (
-                  <label key={product.id} className="flex cursor-pointer items-start gap-3 rounded-lg px-3 py-2 hover:bg-black/5">
+                  <label key={product.id} className="flex cursor-pointer items-start gap-3 rounded-lg px-3 py-2 hover:bg-[rgba(255,245,233,.06)]">
                     <input
                       type="checkbox"
                       checked={form.appliesToAll || form.documentIds.includes(product.id)}
@@ -255,8 +255,8 @@ export default function CouponManager() {
         </div>
 
         <div className="grid min-w-0 gap-4 sm:grid-cols-2 sm:col-span-2">
-          <label className="block min-w-0"><span className="text-sm text-muted">Starts (optional)</span><input type="datetime-local" value={form.startsAt} onChange={e => setForm(f => ({ ...f, startsAt: e.target.value }))} className="admin-input mt-1 box-border min-w-0 max-w-full" /></label>
-          <label className="block min-w-0"><span className="text-sm text-muted">Expires (optional)</span><input type="datetime-local" value={form.expiresAt} onChange={e => setForm(f => ({ ...f, expiresAt: e.target.value }))} className="admin-input mt-1 box-border min-w-0 max-w-full" /></label>
+          <label className="block min-w-0"><span className="text-sm text-muted">Starts (optional)</span><input type="datetime-local" value={form.startsAt} onChange={e => setForm(f => ({ ...f, startsAt: e.target.value }))} className="coupon-admin-input mt-1" /></label>
+          <label className="block min-w-0"><span className="text-sm text-muted">Expires (optional)</span><input type="datetime-local" value={form.expiresAt} onChange={e => setForm(f => ({ ...f, expiresAt: e.target.value }))} className="coupon-admin-input mt-1" /></label>
         </div>
 
         <div className="min-w-0 sm:col-span-2">
