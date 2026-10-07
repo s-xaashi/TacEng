@@ -108,17 +108,20 @@ export default function DownloadPurchaseButton({
     try {
       // The file is prepared before this click so navigator.share() retains
       // the required transient user activation.
-      void navigator.share({
-        title: preparedFile.name.replace(/\.pdf$/i, ""),
-        files: [preparedFile],
-      });
+      void navigator
+        .share({
+          title: preparedFile.name.replace(/\.pdf$/i, ""),
+          files: [preparedFile],
+        })
+        .catch((err: unknown) => {
+          if (err instanceof DOMException && err.name === "AbortError") return;
+          setError(err instanceof Error ? err.message : t.marketplace.shareFailed);
+        })
+        .finally(() => setLoading(null));
     } catch (err) {
       setError(err instanceof Error ? err.message : t.marketplace.shareFailed);
       setLoading(null);
-      return;
     }
-
-    setTimeout(() => setLoading(null), 500);
   }
 
   return (
