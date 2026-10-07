@@ -45,9 +45,13 @@ function parseCoupon(input: CouponInput) {
     throw new Error("Choose a valid discount type.");
   }
 
-  const discountPercent = discountType === "percentage" ? Number(input.discountPercent) : null;
-  if (discountType === "percentage" && (!Number.isFinite(discountPercent!) || discountPercent! <= 0 || discountPercent! > 100)) {
-    throw new Error("Percentage must be greater than 0 and no more than 100.");
+  let discountPercent: number | null = null;
+  if (discountType === "percentage") {
+    const parsedPercent = Number(input.discountPercent);
+    if (!Number.isFinite(parsedPercent) || parsedPercent <= 0 || parsedPercent > 100) {
+      throw new Error("Percentage must be greater than 0 and no more than 100.");
+    }
+    discountPercent = parsedPercent;
   }
 
   const startsAt = parseDate(input.startsAt);
