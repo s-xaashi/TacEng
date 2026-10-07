@@ -6,7 +6,7 @@ import { createR2PresignedUrl, isR2DocumentKey } from "@/lib/r2";
 const SIGNED_URL_TTL_SECONDS = 5 * 60; // short-lived, per spec
 
 export async function POST(req: NextRequest) {
-  let body: { purchaseId?: string; mode?: "url" | "stream" };
+  let body: { purchaseId?: string; mode?: "url" | "stream" | "prepare" };
   try {
     body = await req.json();
   } catch {
@@ -110,12 +110,14 @@ export async function POST(req: NextRequest) {
     downloadUrl = signed.signedUrl;
   }
 
-  await supabase
-    .from("documents")
-    .update({ download_count: (doc.download_count ?? 0) + 1 })
-    .eq("id", doc.id);
+  if (body.mode !== "prepare") {
+    await supabase
+      .from("documents")
+      .update({ download_count: (doc.download_count ?? 0) + 1 })
+      .eq("id", doc.id);
+  }
 
-  if (body.mode === "stream") {
+  if (body.mode === "stream" || body.mode === "prepare") {
     try {
       const fileResponse = await fetch(downloadUrl, { cache: "no-store" });
 
