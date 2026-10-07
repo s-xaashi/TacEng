@@ -167,7 +167,7 @@ export default function BuyModal({
         <div className="mt-5">
           <div className="flex gap-2">
             <input value={couponCode} onChange={e => setCouponCode(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); applyCoupon(); } }} placeholder={t.marketplace.couponCode} maxLength={80} className="focus-ring min-w-0 flex-1 rounded-lg border border-line bg-white/60 px-3 py-2 text-sm text-ink" />
-            <button type="button" onClick={applyCoupon} disabled={couponLoading} className="focus-ring rounded-lg border border-line px-4 py-2 text-sm text-ink disabled:opacity-50"{couponLoading ? "…" : t.marketplace.couponApply}</button>
+            <button type="button" onClick={applyCoupon} disabled={couponLoading} className="focus-ring rounded-lg border border-line px-4 py-2 text-sm text-ink disabled:opacity-50">{couponLoading ? "…" : t.marketplace.couponApply}</button>
           </div>
           {couponError && <p className="mt-2 text-xs text-red-700">{couponError}</p>}
         </div>
