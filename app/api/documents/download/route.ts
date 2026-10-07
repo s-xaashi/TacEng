@@ -128,18 +128,33 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const pathName = filePath.split("/").pop() ?? "document.pdf";
+      const pathName = filePath.split("/").pop() ?? "document";
       const fileName = pathName
         .replace(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i, "")
         .replace(/["\\\r\n]/g, "")
-        .slice(0, 180) || "document.pdf";
-      const finalFileName = /\.pdf$/i.test(fileName) ? fileName : `${fileName}.pdf`;
+        .slice(0, 180) || "document";
+      const extension = fileName.match(/\.([a-z0-9]{1,10})$/i)?.[1]?.toLowerCase();
+      const mimeByExtension: Record<string, string> = {
+        pdf: "application/pdf",
+        xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        xls: "application/vnd.ms-excel",
+        csv: "text/csv",
+        docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        doc: "application/msword",
+        pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        ppt: "application/vnd.ms-powerpoint",
+        zip: "application/zip",
+        txt: "text/plain",
+      };
+      const contentType = fileResponse.headers.get("Content-Type") ||
+        (extension ? mimeByExtension[extension] : undefined) ||
+        "application/octet-stream";
 
       return new NextResponse(fileResponse.body, {
         status: 200,
         headers: {
-          "Content-Type": fileResponse.headers.get("Content-Type") || "application/pdf",
-          "Content-Disposition": `attachment; filename="${finalFileName}"`,
+          "Content-Type": contentType,
+          "Content-Disposition": `attachment; filename="${fileName}"`,
           "Cache-Control": "private, no-store, max-age=0",
           "X-Content-Type-Options": "nosniff",
         },
