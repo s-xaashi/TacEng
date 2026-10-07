@@ -11,6 +11,7 @@ export type CouponRecord = {
   discount_type: CouponDiscountType;
   discount_percent: number | null;
   active: boolean;
+  applies_to_all: boolean;
   starts_at: string | null;
   expires_at: string | null;
 };
@@ -61,16 +62,13 @@ export async function getCouponQuote(
 
   const document = await getPurchasableDocument(documentId, variantId);
   if (!document) {
-    throw new CouponError(
-      "not_applicable",
-      "Coupons can only be used with paid documents or paid levels.",
-    );
+    throw new CouponError("not_applicable", "Coupons can only be used with paid documents or paid levels.");
   }
 
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("document_coupons")
-    .select("id, code, discount_type, discount_percent, active, starts_at, expires_at")
+    .select("id, code, discount_type, discount_percent, active, applies_to_all, starts_at, expires_at")
     .eq("code", code)
     .maybeSingle();
 
@@ -88,6 +86,23 @@ export async function getCouponQuote(
   }
   if (data.expires_at && new Date(data.expires_at).getTime() <= now) {
     throw new CouponError("expired", "This coupon has expired.");
+  }
+
+  if (!data.applies_to_all) {
+    const { data: assignment, error: assignmentError } = await supabase
+      .from("document_coupon_documents")
+      .select("document_id")
+      .eq("coupon_id", data.id)
+      .eq("document_id", document.id)
+      .maybeSingle();
+
+    if (assignmentError) {
+      console.error("Coupon assignment lookup failed", { couponId: data.id, message: assignmentError.message });
+      throw new CouponError("server_error", "We couldn't validate the coupon. Please try again.");
+    }
+    if (!assignment) {
+      throw new CouponError("not_applicable", "This coupon does not apply to this document.");
+    }
   }
 
   const coupon = data as CouponRecord;
