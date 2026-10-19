@@ -124,11 +124,18 @@ export default function Projects() {
               const title = titleFor(project);
               const description = descriptionFor(project);
               return (
-                <button
+                <div
                   key={project.id}
-                  type="button"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => setActiveProject(project)}
-                  className="project-slide project-card-trigger block h-full w-full text-left focus-ring"
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setActiveProject(project);
+                    }
+                  }}
+                  className="project-slide project-card-trigger block h-full w-full cursor-pointer text-left focus-ring"
                   aria-haspopup="dialog"
                   aria-label={(locale === "so" ? "Faahfaahin mashruuca: " : "View project details: ") + title}
                 >
@@ -156,7 +163,7 @@ export default function Projects() {
                       </ul>
                     </div>
                   </article>
-                </button>
+                </div>
               );
             })}
           </div>
