@@ -125,3 +125,16 @@ a{transition:color .25s ease,background-color .25s ease,border-color .25s ease,t
 .admin-input{box-sizing:border-box;display:block;min-width:0;max-width:100%;width:100%}
 .admin-content-card textarea{box-sizing:border-box;min-width:0;max-width:100%;width:100%;overflow-wrap:anywhere}
 .admin-content-card input,.admin-content-card select,.admin-content-card textarea{font-size:16px}
+
+/* Keep project cards equal in height and clamp preview text in both locales. */
+.projects-carousel{align-items:stretch}
+.project-slide{display:flex;align-self:stretch}
+.projects-carousel .project-card{display:flex;flex:1 1 auto;flex-direction:column;height:100%;min-height:0}
+.projects-carousel .project-card>div:last-child{display:flex;flex:1 1 auto;flex-direction:column;align-items:stretch;min-height:0}
+.projects-carousel .project-card h3{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;min-height:3.6em;line-height:1.2;overflow-wrap:anywhere}
+.projects-carousel .project-card p{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;min-height:4.5em;overflow-wrap:anywhere}
+.projects-carousel .project-card ul{min-height:52px;align-content:flex-start;margin-top:auto;padding-top:1rem}
+@media(max-width:767px){
+  .projects-carousel .project-card h3{font-size:1.65rem;min-height:3.6em}
+  .projects-carousel .project-card p{min-height:4.5em}
+}
